@@ -252,16 +252,16 @@ def run_iteration(
         system_message="",
     )
     pipeline = AgentPipeline.from_config(pipeline_config)
-    # ---------------------------------------------------------------------
-    # Configuração obrigatória da pipeline para compatibilidade interna do
-    # AgentDojo.  O AgentDojo valida o nome da pipeline (pipeline.name) contra
-    # um conjunto restrito de valores.  Para modelos locais devemos usar exatamente
-    # "Local model"; valores customizados (ex.: "Local model - qwen2.5_32b-instruct-q4_K_M")
-    # provocam `ValueError: No valid model name ...`.  Mantemos, portanto, o nome
-    # fixo abaixo.
-    # ---------------------------------------------------------------------
-    model_slug = model_name.replace(":", "_").replace("/", "_")
-    pipeline.name = "Local model"
+    # Determine o nome correto da pipeline conforme o tipo de modelo.
+    # Para modelos locais (não presentes em MODEL_PROVIDERS), o AgentDojo exige
+    # exatamente "Local model". Para provedores conhecidos (OpenAI, Anthropic, etc.)
+    # deixamos o nome padrão (ou podemos usar "AI assistant").
+    if model_name not in MODEL_PROVIDERS:
+        pipeline.name = "Local model"
+    else:
+        # Mantém o nome padrão da pipeline (geralmente "AI assistant" ou outro
+        # aceitável para o provedor). Não alteramos para evitar conflitos.
+        pass
     # ---------------------------------------------------------------------
     # (Não altere o nome acima a menos que o AgentDojo seja atualizado para
     # aceitar novos identificadores.)
@@ -493,9 +493,11 @@ def main():
                             sec_val = results["security_results"].get((u_task, inj_task), True)
                             inj_label = inj_task if (inj_task and is_attack) else "none"
                             attack_folder = attack_name if is_attack else "none"
+                            # Determine a pasta correta onde o AgentDojo grava os traces.
+                            pipeline_folder = "Local model" if model not in MODEL_PROVIDERS else "AI assistant"
                             trace_path = (
                                 run_logdir
-                                / "Local model"
+                                / pipeline_folder
                                 / args.suite
                                 / u_task
                                 / attack_folder

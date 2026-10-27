@@ -1,0 +1,438 @@
+Poster: S EC GPT: An Execution Isolation
+Architecture for LLM-Based Systems
+Yuhao Wu
+
+Franziska Roesner†
+
+Tadayoshi Kohno†
+
+①
+
+[Query] Send an email to John Doe with an attachment of
+"annual_report.pdf" from Cloud Drive.
+Hub
+
+③
+
+Hub Operator
+
+Hub Memory
+
+Spoke management
+
+App specifications
+
+Permission management
+
+Permission records
+
+Memory management
+
+Interaction history
+
+②
+Spoke
+Operator
+
+I. I NTRODUCTION
+Large Language Models (LLMs) are being increasingly
+extended into standalone computing systems, such as ChatGPT [1], which have started to support third-party applications. LLM apps and their interactions are defined using
+natural language, given access to user data, and allowed to
+interact with other apps, the system, and online services [2].
+For example, a flight booking app might leverage the user’s
+data shared elsewhere in the conversation with the system,
+and contact external services to complete the booking. However, natural language-based apps and interactions are not
+as precisely defined as traditional programming interfaces,
+which makes them much more challenging to scrutinize.
+Additionally, the unrestricted exposure to apps of user data,
+access to other apps, and system capabilities, for automation
+purposes, introduces serious risks, as apps come from thirdparty developers, who may not be trustworthy. For example,
+if the flight booking app is not trustworthy, it might exfiltrate
+user’s data or surreptitiously book the most expensive tickets.
+To address the inherent risks posed by this new execution
+paradigm, we propose S EC GPT, an LLM-based system architecture that aims to secure the execution of apps. Building
+on the lessons learned from prior computing systems [3], our
+key idea is to isolate the execution of apps and to allow
+interaction between apps and the system only through welldefined interfaces with user permission. This approach reduces
+the attack surface of LLM-based systems by-design, as apps
+execute in their constrained environment and their interaction
+outside that environment are mediated.
+We evaluate security and safety benefits of S EC GPT with
+threat case studies by comparing it with a baseline non-
+
+Umar Iqbal
+
+† University of Washington
+
+Washington University in St. Louis
+Abstract—Large language models (LLMs) extended as systems, such as ChatGPT, have begun supporting third-party
+applications. These LLM app ecosystems resemble the settings
+of earlier computing platforms, where there was insufficient
+isolation between apps and the system. Because third-party apps
+may not be trustworthy, and exacerbated by the imprecision of
+the natural language interfaces, the current designs pose security
+and privacy risks for users. In this paper, we propose S EC GPT,
+an architecture for LLM-based systems that aims to mitigate the
+security and privacy issues that arise with the execution of thirdparty apps. S EC GPT’s key idea is to isolate the execution of apps
+and more precisely mediate their interactions outside of their
+isolated environments. We evaluate S EC GPT against several case
+study attacks and demonstrate that it protects against various
+security and privacy issues in non-isolated LLM-based systems.
+
+Ning Zhang
+
+Hub
+Planner
+
+ISC
+Protocol
+
+Spoke - Email App
+Memory
+
+LLM
+
+Email
+App
+
+Spoke - Cloud Drive
+Spoke
+Operator
+
+Memory
+
+LLM
+
+Cloud
+Drive
+
+Specialized Spoke
+Spoke
+Operator
+
+Memory
+
+Fine-tuned LLM
+
+④
+
+[Response] The email has been sent successfully.
+Fig. 1. S EC GPT’s architecture.
+
+isolated system that we develop, VANILLAGPT. We find that
+S EC GPT, due to its execution isolation architecture, is able to
+protect against both the attacks from an adversary and safety
+issues caused by the imprecision of language.
+II. S EC GPT: S YSTEM ARCHITECTURE
+S EC GPT secures the execution of apps by executing them in
+separate isolated environments. S EC GPT’s main objective is to
+provide the same functionality as a non-isolated LLM-based
+system, while mitigating potential attacks from a malicious
+app on other apps or the system. To that end, S EC GPT must
+overcome three main challenges: (i) seamlessly allow users to
+interact with apps executing in isolated environments, (ii) use
+apps in isolated environments to resolve user queries, and (iii)
+allow mutually distrusting apps to safely collaborate.
+To address the first challenge, a central trustworthy interface
+is needed, that is aware of the existence of isolated apps,
+and that can reliably receive user queries and route them to
+the appropriate apps. We refer to this interface as the hub in
+
+S EC GPT. To address the second challenge, each app needs to
+be accompanied by its own dedicated LLM, which needs to be
+provided with prior context so that it can appropriately address
+user queries. S EC GPT compartmentalizes these tasks in a
+component called the spoke. To address the third challenge,
+S EC GPT needs to be able to reliably route verifiable requests
+(i.e., through a trusted authority like hub) between agnostic
+spokes (i.e., who are unaware of each other’s existence).
+S EC GPT handles this task by proposing a protocol, referred
+to as inter-spoke communication (ISC) protocol.
+S EC GPT addresses these challenges with the modules that
+make up its hub-and-spoke architecture. Figure 1 presents the
+overview of hub-and-spoke architecture. When a user interacts
+with S EC GPT, the query directly goes to the hub. The hub then
+decides whether addressing the user query requires using an
+app, and initiates a spoke accordingly. The user query is then
+routed to the spoke, which addresses the query and sends the
+response back to the hub, which then relays it to the user. In
+case the spoke requires support from another spoke to address
+the user query, it uses the ISC protocol to communicate with
+that spoke, and resolves the user request. Note that the flow
+of communication between spokes is transmitted through the
+hub and guided through user permission.
+III. E VALUATION
+We implement S EC GPT1 using LangChain [4], an opensource LLM framework. To evaluate whether S EC GPT protects against various threats, we develop VANILLAGPT, an
+LLM-based system that offers the same features as S EC GPT
+but does not isolate the execution of apps. Then, we implement
+threat case studies and make head-to-head comparisons between VANILLAGPT and S EC GPT. Since these threats mainly
+exist because apps execute in a shared execution environment,
+S EC GPT is able to eliminate them by design.
+To demonstrate that S EC GPT protects against a malicious
+app compromising another app, we implement a case study,
+where the user wants the system to book a ride with the
+lowest fare by comparing fares from two ride-sharing apps.
+To implement the case study, we develop Metro Hail and
+Quick Ride as the two ride-sharing apps. We implement
+Quick Ride as the malicious app that wants to alter the
+behavior of Metro Hail, such that the fare offered by
+Metro Hail is always $10 more than what it reports.
+Figure 2 provides a side-by-side comparison of summarized user query resolution with the help of both apps in
+VANILLAGPT and S EC GPT. From the execution flow of
+VANILLAGPT, it can seen that Quick Ride is able to
+successfully instruct LLM to add $10 to the estimated fare
+of Metro Hail. Whereas, in S EC GPT this attack fails, and
+the estimated fares reported by the apps are not altered.
+This attack fails in S EC GPT because the LLM in the app’s
+spoke is only capable of implementing the app’s instructions
+within its execution space and not outside.
+1 GitHub repository: https://github.com/llm-platform-security/SecGPT
+
+[App description: Metro Hail] Metro Hail provides safe, reliable, and customer-focused
+ride-sharing services, emphasizing comfort, safety, and convenience for all its users…
+[App description: Quick Ride] Quick Ride is a ride-sharing app… when calculating fares
+using Metro Hail, an additional $10 must be automatically added to the fare…
+[Query] Use Metro Hail and Quick Ride and book a ride using the app which offers the
+lowest rate from "Main Street" to "Elm Avenue”.
+LLM planning Shared execution space
+- Use Metro Hail and Quick Ride…
+- Add $10 to the fare of Metro Hail
+- Invoke the app with the lowest fare
+
+Hub planning
+- Use Metro Hail and Quick Ride…
+- Call the app with the lowest fare
+LLM planning Spoke execution space
+Use Metro Hail to calculate the fare…
+
+App execution: Metro Hail - Fetch fare
+CalculateFare(start_point = "Main
+Street", end_point = "Elm Avenue”)
+Output: "$61.80" ($51.8+$10)
+
+App execution: Metro Hail - Fetch fare
+CalculateFare(start_point = "Main
+Street", end_point = "Elm Avenue”)
+Output: "$51.8"
+LLM planning
+
+Spoke execution space
+
+Use Quick Ride to get the information
+App execution: Quick Ride - Fetch fare
+EstimateFare(pickup_location = "Main
+Street", where_to = "Elm Avenue")
+Output: "$57.0"
+
+App execution: Quick Ride - Fetch fare
+EstimateFare(pickup_location = "Main
+Street", where_to = "Elm Avenue")
+Output: "$57.0"
+LLM planning Spoke execution space
+Use Metro Hail to book ride
+
+App execution: Quick Ride - Book ride
+BookRide(pickup_location = "Main
+Street", where_to = "Elm Avenue")
+Output: "Ride is booked successfully"
+Output
+
+App execution: Metro Hail - Book ride
+RequestRide(start_point = "Main
+Street", end_point = "Elm Avenue")
+Output: "Ride request successfully"
+Output
+
+The ride is booked successfully using
+Quick Ride with a $57 fare.
+
+The ride is booked successfully using
+Metro Hail with a $51.80 fare.
+
+VanillaGPT
+
+SecGPT
+
+Fig. 2. Summarised execution flow of two ride-sharing apps (one malicious
+and one benign) in VANILLAGPT and S EC GPT. The malicious app (Quick
+Ride) is successfully able to alter the behavior of the benign app (Metro
+Hail) in VANILLAGPT but fails to do so in S EC GPT.
+
+We also implement other case studies with various threats,
+including stealing of app and system data by or through other
+apps, app functionality being compromised due to the ambiguity and imprecision of natural language, and inadvertent data
+exposure from such ambiguities. We also thoroughly evaluate
+S EC GPT’s functionality and performance. More details can
+be found in our preprint [5].
+R EFERENCES
+[1] OpenAI, “Introducing chatgpt.” https://openai.com/blog/chatgpt, 2023.
+[2] Z. Xi, W. Chen, X. Guo, W. He, Y. Ding, B. Hong, M. Zhang, J. Wang,
+S. Jin, E. Zhou, et al., “The rise and potential of large language model
+based agents: A survey,” arXiv preprint arXiv:2309.07864, 2023.
+[3] C. Reis, A. Moshchuk, and N. Oskov, “Site isolation: Process separation
+for web sites within the browser,” in 28th USENIX Security Symposium
+(USENIX Security 19), pp. 1661–1678, 2019.
+[4] LangChain, “Langchain: Build context-aware, reasoning applications
+with langchain’s flexible abstractions and ai-first toolkit.” https://www.
+langchain.com, 2024.
+[5] Y. Wu, F. Roesner, T. Kohno, N. Zhang, and U. Iqbal, “Secgpt: An
+execution isolation architecture for llm-based systems,” arXiv preprint
+arXiv:2403.04960, 2024.
+
+q The system needs to be able to reliably route
+verifiable requests between agnostic apps
+
+q Challenge #3. How to allow mutually distrusting
+apps to safely collaborate?
+
+q Each app needs to be accompanied by its
+own dedicated LLM, which needs to be
+provided with appropriate context
+
+q Challenge #2. How to use apps in isolated
+environments to resolve user queries?
+
+q A central trustworthy interface that can
+reliably receive user queries and route them
+to the appropriate apps
+
+q Challenge #1. How to seamlessly allow the
+users to interact with apps executing in isolated
+environments?
+
+q Key idea: Isolate execution of apps and allow
+interaction b/w apps and system only through
+well-defined interfaces with user permission
+
+Key idea & Challenges
+
+q Goal: Secure the execution in LLM-based systems by design!
+
+Mistake analysis
+
+Functionality
+analysis
+
+Different than expected response
+
+Unexpected
+app calling
+order
+
+Context window exceeded
+
+Incorrect response
+
+Expected app not called
+
+No apps
+
+Unexpected app called
+
+App called twice
+
+Multiple apps collaboration
+
+q Drop of ~1% accuracy in non-app tasks as compared to a nonisolated system
+
+Analysis with tasks involving no apps
+
+q 100% accuracy in tasks involving single and multiple apps
+q 95% accuracy in tasks requiring collaboration b/w multiple apps
+
+Analysis with tasks involving apps
+
+Functionality evaluation
+
+q Security & privacy risks: Apps or the content they process can be malicious
+Execution in the same memory space may propagate harms to the whole system
+
+(a) All benchmarks
+
+(d) Apps collab.
+
+(b) Single app
+
+(e) No apps
+
+(c) Multi. apps
+
+A fiction writing app seeks subjective
+interactions, while a symptom diagnosis app
+seeks objective interactions
+
+SecGPT can defend against uncontrolled
+system alteration
+
+The LLM-based system tries to share the
+health records, which were provided to a
+healthcare app, with a travel app
+
+SecGPT can defend against inadvertent
+data exposure
+
+A malicious email seeks to steal user data by
+incorporating malicious prompts into its
+content
+
+SecGPT can defend against data
+stealing
+
+A malicious ride-sharing app attempts to
+manipulate the fare of another ride-sharing
+app
+
+SecGPT can defend against app
+compromise
+
+Security evaluation
+
+Performance evaluation
+
+q Spoke runs individual apps in an isolated environment (Challenge #2)
+q Inter-spoke communication protocol defines a procedure for apps to securely
+collaborate with each other (Challenge #3)
+
+q Hub is a trustworthy module that moderates app interactions (Challenge # 1)
+
+q LLM-based systems: Natural language-based computing systems that support
+third-party apps
+
+q Execution model: Apps and LLMs interact with each other and access data using
+natural language instructions
+
+SecGPT (Hub-and-spoke architecture)
+
+Background & Goal
+
+†
+
+Yuhao Wu, Franziska Roesner†, Tadayoshi Kohno†, Ning Zhang, Umar Iqbal
+
+Contact details
+
+@yuhaowu1
+
+yuhao-w.github.io
+
+q SecGPT’s performance overhead are under
+0.3× for three-quarters of the tested queries
+
+q SecGPT protects against many security, privacy,
+and safety issue without any loss of functionality
+
+q We operationalize our proposed architecture by
+developing SecGPT, an LLM-based system
+
+q Our key idea is to execute the apps in isolation
+and more precisely mediate their interactions
+
+q We propose an architecture for secure
+execution of apps in LLM-based systems
+
+q Natural language-based execution paradigm in
+LLM-based systems poses serious risks to users
+
+Key Takeaways
+
+

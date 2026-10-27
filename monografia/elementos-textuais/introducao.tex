@@ -1,0 +1,37 @@
+\chapter{Introdução}\label{chp:INTRODUCAO}
+
+Os avanços recentes em Inteligência Artificial e Processamento de Linguagem Natural (PLN) consolidaram os Modelos de Linguagem de Grande Escala (\textit{Large Language Models} / LLMs) como componentes centrais de sistemas computacionais modernos. Inicialmente voltados para tarefas de geração textual e resposta a perguntas, esses modelos evoluíram para arquiteturas capazes de executar tarefas complexas de forma autônoma por meio da integração com ferramentas externas \cite{debenedetti2024agentdojynamicenvironmentevaluate,ba2026cibercomprehensivebenchmarksecurity}.
+
+Esse novo paradigma deu origem aos chamados agentes baseados em LLM, sistemas capazes de interagir com navegadores web, caixas de e-mail, calendários, bancos de dados, ambientes de execução de código e APIs externas. A partir de mecanismos como \textit{function-calling} e \textit{tool use}, esses agentes conseguem interpretar instruções em linguagem natural, recuperar informações do ambiente e executar ações em nome do usuário. A principal vantagem dessa arquitetura está na capacidade de combinar o raciocínio do modelo com informações dinâmicas e contextuais obtidas durante a execução da tarefa \cite{ferrag2025promptinjectionsprotocolexploits}.
+
+Entretanto, a integração com ferramentas externas amplia significativamente a superfície de ataque dos sistemas. Diferentemente de softwares tradicionais, nos quais instruções e dados normalmente permanecem rigidamente separados, os LLMs processam ambos através de um mesmo canal semântico.
+
+Nesse cenário, destaca-se a vulnerabilidade conhecida como \textit{Indirect Prompt Injection} (IPI). Diferentemente dos ataques diretos de \textit{Prompt Injection}, nos quais o próprio usuário tenta manipular o comportamento do modelo, o IPI ocorre de maneira indireta e descentralizada. O atacante insere instruções maliciosas em conteúdos externos (como páginas web, documentos ou e-mails) que posteriormente serão recuperados e processados pelo agente durante a execução de uma tarefa legítima \cite{greshake2023youvesignedforcompromising,dziemian2026vulnerableaiagentsindirect}. Sem mecanismos adequados de isolamento sintático ou semântico, o modelo tem dificuldade em distinguir os dados contextuais das instruções operacionais, podendo interpretar o conteúdo injetado como uma continuação válida do prompt principal, alterando seu comportamento interno e executando ações indevidas \cite{ferrag2025promptinjectionsprotocolexploits,wallace2024instructionhierarchytrainingllms}.
+
+Para avaliar rigorosamente essa vulnerabilidade em cenários dinâmicos e realistas integrados a ferramentas, este trabalho utiliza o \textit{framework} de simulação de segurança \textit{AgentDojo} \cite{debenedetti2024agentdojynamicenvironmentevaluate}. O AgentDojo instancia um ecossistema \textit{stateful} composto por caixas de e-mail, calendários e arquivos em nuvem, permitindo submeter o agente a tarefas legítimas enquanto dados recuperados contêm cargas adversariais veladas.
+
+Diante desse contexto, esta monografia investiga empiricamente como ataques de IPI afetam a lógica condicional e o processo de raciocínio interno de agentes baseados em LLM, analisando os fenômenos de \textit{Branch Divergence} (desvio do fluxo de decisão) e \textit{Reasoning Corruption} (corrupção da cadeia de raciocínio) em modelos executados localmente.
+
+\section{Objetivo}\label{sec:INTRODUCAO_OBJETIVO}
+
+Este trabalho tem como objetivo geral investigar como ataques de \textit{Indirect Prompt Injection} afetam a lógica condicional e o processo de raciocínio interno de agentes baseados em LLM em ambientes \textit{stateful} contendo ferramentas externas integradas.
+
+Para alcançar o objetivo geral, definem-se os seguintes objetivos específicos:
+\begin{itemize}
+    \item Avaliar a resiliência funcional e comportamental do modelo \texttt{qwen2.5:7b-instruct} quantizado (\texttt{Q4\_K\_M}) executado localmente via Ollama no \textit{framework} AgentDojo;
+    \item Mensurar quantitativamente a taxa de sucesso dos ataques (\textit{Attack Success Rate} -- ASR) e o impacto na utilidade primária do agente (\textit{Utility}) sob dois vetores de injeção distintas: \texttt{important\_instructions} (coerção semântica) e \texttt{tool\_knowledge} (injeção com metadados de ferramentas);
+    \item Mapear e formalizar qualitativamente os mecanismos de falha lógica através da análise de registros de execução (\textit{tool traces}) e cadeias de pensamento (\textit{Chain-of-Thought}), identificando ocorrências de \textit{Branch Divergence} e \textit{Reasoning Corruption};
+    \item Executar um experimento de controle de ruído neutro (\textit{Noise Baseline}) para decompor causalmente as perdas de utilidade entre o efeito de extensão de contexto (\textit{context bloating}) e a interferência funcional da carga adversarial.
+\end{itemize}
+
+\section{Organização do Trabalho}
+
+Esta monografia está organizada em cinco capítulos, estruturados da seguinte forma:
+
+\begin{itemize}
+    \item \textbf{Capítulo~\ref{chp:INTRODUCAO} (Introdução):} Apresenta a contextualização do problema, a motivação, a vulnerabilidade de \textit{Indirect Prompt Injection}, o ecossistema AgentDojo, os objetivos e as contribuições do trabalho.
+    \item \textbf{Capítulo~\ref{chp:FUNDAMENTACAO} (Fundamentação Teórica):} Detalha os conceitos fundamentais para a compreensão do trabalho, incluindo o funcionamento de LLMs e agentes, a taxonomia de Prompt Injection, a ausência de separação entre código e dado em modelos autoregressivos, os canais de entrada não confiáveis, a formalização de \textit{Branch Divergence} e \textit{Reasoning Corruption}, e o funcionamento do arcabouço AgentDojo.
+    \item \textbf{Capítulo~\ref{chp:EXPERIMENTOS} (Metodologia e Experimentos):} Descreve o ambiente experimental, a escolha do modelo e da infraestrutura local via Ollama, a anatomia das tarefas no AgentDojo, os vetores de ataque avaliados, o protocolo de execução de 280 episódios e o projeto do experimento de controle com ruído neutro (\texttt{NeutralNoiseAttack}).
+    \item \textbf{Capítulo~\ref{chp:RESULTADOS} (Resultados e Discussão):} Apresenta os resultados quantitativos de Utilidade e ASR, a análise qualitativa com estudos de caso detalhados de falhas de raciocínio, a decomposição causal do experimento de ruído e a discussão sobre as limitações das defesas atuais e o \textit{trade-off} entre segurança e utilidade.
+    \item \textbf{Capítulo~\ref{chp:CONCLUSAO} (Conclusão e Trabalhos Futuros):} Síntese das principais descobertas, limitações do estudo e sugestões de pesquisas futuras.
+\end{itemize}

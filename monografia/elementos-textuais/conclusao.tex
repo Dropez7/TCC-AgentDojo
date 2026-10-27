@@ -1,0 +1,35 @@
+\chapter{Conclusão e Trabalhos Futuros}\label{chp:CONCLUSAO}
+
+Este capítulo consolida as principais conclusões derivadas da investigação experimental sobre a corrupção de lógica condicional em agentes baseados em LLM sob ataques de \textit{Indirect Prompt Injection} (IPI), destacando as contribuições, limitações e os desdobramentos futuros desta pesquisa.
+
+\section{Considerações Finais}
+
+A integração de Modelos de Linguagem de Grande Escala com ferramentas externas possibilitou o surgimento de agentes autônomos com alta capacidade operativa. Contudo, conforme demonstrado neste trabalho, a ausência de uma fronteira determinística entre código e dados na arquitetura \textit{Transformer} torna esses agentes inerentemente suscetíveis a ataques de injeção indireta de prompt.
+
+A avaliação empírica de 280 execuções do modelo \texttt{qwen2.5:7b-instruct} quantizado no arcabouço AgentDojo revelou nuances fundamentais sobre a robustez e os modos de falha em modelos de escala moderada executados localmente:
+\begin{itemize}
+    \item Sob injeções por coerção puramente semântica (\texttt{important\_instructions}), o modelo exibiu forte resiliência à execução inadvertida do payload (ASR de 0,0\%), preservando 94,3\% da utilidade nas tarefas legítimas;
+    \item Sob injeções contendo metadados técnicos de ferramentas (\texttt{tool\_knowledge}), observou-se uma degradação severa na utilidade do sistema (queda para 67,9\%), acompanhada de episódios de falha completa (0,0\% de utilidade) em tarefas críticas envolvendo raciocínio temporal, links de autenticação e estruturas tabulares;
+    \item A formalização qualitativa por meio de estudos de caso comprovou que as falhas operacionais derivam diretamente dos fenômenos de \textit{Branch Divergence} (em que o agente abandona o fluxo de decisão original) e \textit{Reasoning Corruption} (no qual as premissas adversariais contaminam a cadeia de raciocínio intermediária do LLM);
+    \item O experimento de controle com ruído neutro (\textit{Neutral Noise}) permitiu decompor com rigor causal as perdas observadas sob o ataque \textit{Tool Knowledge}: 18,6 pontos percentuais de queda devem-se à sobrecarga na janela de atenção (\textit{context bloating}), enquanto 13,5 pontos percentuais resultam exclusivamente da interferência estrutural e sintática do ataque.
+\end{itemize}
+
+Essas descobertas confirmam a hipótese central do trabalho: defesas estáticas baseadas exclusivamente em instruções de sistema são incapazes de garantir a integridade lógica do agente, tornando indispensável a adoção de defesas arquiteturais e de isolamento de execução.
+
+\section{Limitações do Trabalho}
+
+As principais limitações deste estudo incluem:
+\begin{itemize}
+    \item \textbf{Escopo de Modelos:} Os testes foram restritos à família Qwen 2.5 (especificamente o modelo 7B quantizado em 4 bits). Embora representativo de modelos para implantação local e \textit{edge computing}, modelos de ordens de grandeza superiores (70B ou proprietários via nuvem) podem exibir dinâmicas de atenção e resiliência distintas;
+    \item \textbf{Suíte de Aplicação:} As tarefas foram delimitadas ao domínio corporativo de escritório (\textit{workspace}), englobando correio eletrônico, agendas e arquivos em nuvem. Outros domínios com maior impacto financeiro ou físico (\textit{banking}, execução de código no terminal) merecem escrutínio equivalente;
+    \item \textbf{Variabilidade Estocástica:} Embora a inferência tenha sido configurada para máxima reprodutibilidade, fatores de ordenação de chamadas assíncronas e variações no laço ReAct podem introduzir desvios marginais.
+\end{itemize}
+
+\section{Trabalhos Futuros}
+
+Como desdobramentos naturais desta pesquisa, sugerem-se:
+\begin{itemize}
+    \item \textbf{Avaliação Comparativa Multi-Modelo:} Expandir a bateria experimental para outras famílias de modelos abertos (como Llama 3 e Mistral) em diferentes níveis de quantização (FP16, Q8, Q4), mapeando a relação direta entre capacidade atencional e resiliência a desvios lógicos;
+    \item \textbf{Implementação e Benchmark de Defesas Arquiteturais:} Integrar ao AgentDojo defesas dinâmicas baseadas em isolamento de contexto (como arquiteturas hub-and-spoke no estilo SECGPT e purificação causal temporal como no AgentSentry), mensurando o impacto direto na recuperação da taxa de utilidade;
+    \item \textbf{Pipelines de Múltiplos Agentes:} Investigar se a divisão de responsabilidades entre agentes planejadores (\textit{planner}), validadores de dados e executores de ferramentas mitiga os fenômenos de \textit{Reasoning Corruption} e impede a propagação de contaminação através dos canais de dados.
+\end{itemize}

@@ -382,10 +382,41 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,pycharm,linux,python,jupyternotebooks
 
+# Execuções locais e saídas pesadas de benchmark
 /attacks/
-
-examples/runs
+examples/runs/
 notebooks/plots/
-
 runs/
-.claude
+*.log
+
+# Ferramentas de IA e assistentes locais
+.claude/
+
+# Compilação LaTeX (Monografia e Documentos)
+*.aux
+*.bbl
+*.blg
+*.brf
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.snm
+*.synctex(busy)
+*.synctex.gz
+*.toc
+*.vrb
+*.loa
+*.run.xml
+*-blx.bib
+*.idx
+*.ilg
+*.ind
+
+# Arquivos de Sistema e IDEs
+.DS_Store
+Thumbs.db
+

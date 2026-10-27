@@ -1,0 +1,3116 @@
+The Hitchhiker’s Guide to Program Analysis, Part II:
+Deep Thoughts by LLMs
+Haonan Li
+
+Hang Zhang
+
+hli333@ucr.edu
+UC Riverside
+Riverside, California, USA
+
+hz64@iu.edu
+Indiana University Bloomington
+Bloomington, Indiana, USA
+
+arXiv:2504.11711v2 [cs.SE] 17 Apr 2025
+
+Kexin Pei
+
+Zhiyun Qian
+
+kpei@cs.uchicago.edu
+University of Chicago
+Chicago, Illinois, USA
+
+zhiyunq@cs.ucr.edu
+UC Riverside
+Riverside, California, USA
+
+Abstract
+
+example, a static analyzer may flag every arithmetic operation as
+potentially overflowing. While this simplication might ensure no
+genuine vulnerabilities are missed, it inflates the number of false
+positives.
+• Over-Approximation of Path and Data Constraints. In order
+to avoid exponential path exploration, static analyzers often make
+coarse assumptions about whether a path is feasible or how data
+flows through the program. This over-approximation ensures
+analysis completes in a reasonable time, but it also flags numerous
+infeasible paths as potentially vulnerable, resulting in excessive
+false positives.
+Recent advances in Large Language Models (LLMs) offer a promising avenue for overcoming these issues. Trained on vast amounts
+of code and natural language, LLMs exhibit remarkable capabilities
+in understanding code semantics, API usage patterns, and common
+vulnerability types [13, 22, 41]. By leveraging these broader insights,
+LLM-based approach might able to: (1) enhance vulnerability modeling by providing a more nuanced understanding of code semantics,
+and (2) refine path and data constraints by a selective analysis of
+semantically plausible paths and data flows.
+However, LLMs are not a silver bullet for program analysis.
+Despite their semantic understanding capabilities, LLMs are not
+inherently equipped for the rigorous demands of program analysis [18, 39]. Their reasoning proves brittle, particularly when
+confronted with the complex program dependencies crucial for
+security analysis [6, 7, 21]. Indeed, our initial experiments confirm
+that naively applying LLMs to program analysis, for instance, by
+simply asking “Is this warning a true positive?”, yields highly unreliable results, frequently misclassifying vulnerabilities or failing to
+identify critical flaws. This is often because LLMs tend to fixate on
+surface-level code features, missing the critical dependencies that
+dictate program behavior and security properties, especially within
+intricate control and data flows.
+Our work addresses this challenge by introducing a structured
+guidance framework that directs LLM reasoning according to static
+program analysis paradigm. This approach rests on the premise
+that static analysis, while theoretically sound, is limited by practical
+tradeoffs in precision and scalability. By situating LLM reasoning
+within this established methodology, we “compel” the model to
+analyze more rigorously than it would by default, thus mitigating
+the inherent limitations of LLMs in code reasoning.
+
+Static analysis is a cornerstone for software vulnerability detection, yet it often struggles with the classic precision-scalability
+trade-off. In practice, such tools often produce high false positive
+rates, particularly in large codebases like the Linux kernel. This
+imprecision can arise from simplified vulnerability modeling and
+over-approximation of path and data constraints. While Large Language Models (LLMs) show promise in code understanding, their
+naive application to program analysis yields unreliable results due
+to inherent reasoning limitations. We introduce BugLens, a postrefinement framework that significantly improves static analysis
+precision. BugLens guides an LLM to follow traditional analysis
+steps by assessing buggy code patterns for security impact and
+validating the constraints associated with static warnings. Evaluated on real-world Linux kernel bugs, BugLens raises precision
+from 0.10 (raw) and 0.50 (semi-automated refinement) to 0.72, substantially reducing false positives and revealing four previously
+unreported vulnerabilities. Our results suggest that a structured
+LLM-based workflow can meaningfully enhance the effectiveness
+of static analysis tools.
+
+1
+
+Introduction
+
+Static analysis has long served as a cornerstone technique for identifying software vulnerabilities. By analyzing the code without
+dynamic execution, these techniques aim to detect various security
+weaknesses, such as buffer overflows and information leaks. However, static analysis tools often struggle to balance the trade-off
+between precision and scalability [16, 35].
+More precise analysis, for example, symbolic execution [20],
+can be computationally expensive and often infeasible for large
+codebases such as the Linux kernel [50]. Conversely, more scalable
+techniques sacrifice the precision for scalability, leading to a high
+number of false positives. For example, Suture [51], an advanced
+taint bug detection in the Android kernel shows a 90% raw false
+positive rate, which requires manual inspection of the results.
+Specifically, its imprecision stems from two main issues:
+• Simplified Vulnerability Modeling. Static analyzers may often
+rely on heuristic simplified rules for vulnerability detection. For
+This is a preprint of an article submitted to a conference on planet Earth (mostly
+harmless), orbiting a small star in the uncharted backwaters of the unfashionable end
+of the western spiral arm of the Milky Way.
+© 2025 The Authors. Licensed under CC BY 4.0.
+1
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+1
+#define GET_NEXT(ptr, upper_limit, rc)
+\
+In this work,
+wemore
+introduce
+BugLens,
+an innovative
+framework
+analyze
+rigorously
+than it would
+by default,
+thus mitigating
+2
+({
+\
+that post-refines
+the results
+of static
+analysis
+using
+LLMs. Rather
+the inherent
+limitations
+of LLMs
+in code
+reasoning.
+3
+if (((ptr) + 1) > (upper_limit)) { (rc) = -EINVAL; } \
+4
+((rc) == 0) ? *(ptr)++ : -EINVAL;
+\
+than blindly applying
+LLMs
+analyzeB!"L#$%,
+program,anBugLens
+careIn this work,
+we to
+introduce
+innovativeisframework
+5
+})
+that post-re!nes
+the results
+of static analysis
+usinganalysis
+LLMs. Rather
+fully orchestrated
+to teach LLMs
+key concepts
+of program
+6
+int msm_audio_effects_popless_eq_handler(..., long *values ) {
+applying
+LLMs analytical
+to analyze program,
+B!"L#$%
+is care- 7
+and guide than
+themblindly
+toward
+reasonable
+procedures.
+By anlong *param_max_offset = values + MAX_PP_PARAMS_SZ - 1;
+orchestrated
+teach LLMs
+key concepts
+of programthe
+analysis
+8
+int rc = 0;
+alyzing thefully
+output
+of statictoanalysis,
+BugLens
+complements
+9
+int nums = GET_NEXT(values, param_max_offset, rc);
+guide them
+toward
+reasonable
+analytical
+procedures.
+limitationsand
+of existing
+tools,
+especially
+in terms
+of precision,
+andBy an- 10
+for (i = 0; i < nums ; i++) {
+alyzing the output of static analysis, B!"L#$% complements the
+yields more accurate and actionable vulnerability detection for
+uint32_t command_id = GET_NEXT( values , param_max_offset, rc);
+limitations of existing tools, especially in terms of precision, and 11
+12
+...
+practical codebases.
+We demonstrate that this combined approach
+yields more accurate and actionable vulnerability detection for 13
+switch ( command_id ) {
+significantly
+improves
+the precision
+of taint-bug
+detection
+in approach
+the
+practical
+codebases.
+We demonstrate
+that this
+combined
+14
+case EQ_ENABLE:
+Linux kernel,
+reducing
+the
+need
+for
+manual
+inspection
+of
+false
+...
+signi!cantly improves the precision of taint-bug detection in the 15
+16
+break;
+positives, and
+even
+uncovering
+ignored
+vulnerabilities.
+Linux
+kernel,
+reducingpreviously
+the need for
+manual
+inspection of false 17
+default:
+We summarize
+as follows:
+positives,our
+andcontributions
+even uncovering
+previously ignored vulnerabilities. 18
+continue;
+19
+}
+We summarize
+our contributions
+as follows:
+• Post-Refinement
+Framework.
+We introduce
+BugLens, a post20
+if (rc)
+• Post-Re!nement
+Framework. We
+introducestatic
+B!"L#$%,
+a post- 21
+refinement
+framework that supplements
+traditional
+analygoto invalid_config;
+22
+}
+re!nement
+framework
+that
+supplements
+traditional
+static
+analysis to boost precision of the results, overcoming various practical
+23
+...
+to boost precision
+of the results,
+overcoming
+weaknessessisidentified
+from real-world
+static
+analysis various
+tools. practical 24 invalid_config:
+weaknesses identi!ed from real-world static analysis tools.
+25
+return rc;
+• Structured Analysis Guidance (SAG). We design a structured
+• Structured Analysis Guidance (SAG). We design a structured 26 }
+workflow that
+directs
+LLMs
+to
+follow
+the
+principles
+and
+processes
+work"ow that directs LLMs to follow the principles and processes
+Figure 1: A potentially vulnerable code snippet from the Android kernel,
+of established
+static analysis
+paradigms.
+This guided
+approach
+of established
+static analysis
+paradigms.
+This guided
+approach Figure
+1: A potentially
+vulnerable
+code
+snippet
+from
+kernel,
+simpli!ed
+for illustration.
+The array
+values
+is tainted
+andthe
+all Android
+its elements
+are
+achieves better
+vulnerability
+detection
+compared
+to naive
+LLM LLM simplified
+The array values is tainted and all its elements are
+taintedfor
+as illustration.
+well.
+achieves
+better vulnerability
+detection
+compared
+to naive
+tainted as well.
+promptingprompting
+strategies.strategies.
+• Empirical
+Results. Evaluated
+on the Linux
+our solution
+• Empirical
+Results. Evaluated
+on thekernel,
+Linux kernel,
+our solution
+potential
+bugs
+are indeed
+exploitable,
+require
+considerable
+manual
+review
+to confirm
+their
+validity.and
+Westill
+discuss
+these
+challenges
+improved
+the precision
+of a real-world
+static analysis
+tool from
+improved the
+precision
+of a real-world
+static analysis
+tool from
+manual
+review
+to con!rm
+theirof
+validity.
+We discuss these challenges
+in
+detail
+in
+the
+following
+parts
+this
+section.
+0.1
+to
+0.72.
+Interestingly,
+prior
+manual
+analysis
+incorrectly
+!ltered
+0.1 to 0.72. Interestingly, prior manual analysis incorrectly filtered
+in detail in the following parts of this section.
+four that
+warnings
+were retained
+by B!"L#$%.
+four warnings
+werethat
+retained
+by BugLens.
+
+2.2
+
+Motivating Example
+
+2.2
+
+Motivating Example
+
+The primary motivation for BugLens stems from the persistent
+2 Background & Motivation
+The primary motivation for B!"L#$% stems from the persistent
+challenge
+of achieving both precision and scalability in static vul2.1 Taint
+& Static Analysis
+challenge of achieving both precision and scalability in static vul2 Background
+& Bugs
+Motivation
+nerability analysis, particularly for large-scale, complex systems
+nerability analysis, particularly for large-scale, complex systems
+A taint bug is a type of vulnerability that arises when untrusted data
+like the
+kernel.
+While
+static
+forideniden2.1 Taint
+Bugs & Static Analysis
+like Linux
+the Linux
+kernel.
+While
+staticanalysis
+analysis is
+is indispensable
+indispensable for
+is improperly handled within a program, leading to potential secutifying
+potential
+security
+issues,
+current
+tools
+often
+generate
+a
+high
+tifying potential security issues, current tools often generate a high
+A taint bugrity
+is a risks.
+type of
+thatLinux
+arises
+whenthe
+untrusted
+data call
+Forvulnerability
+example, in the
+kernel,
+ioctl system
+volume
+of
+findings,
+many
+of
+which
+are
+false
+positives
+(FPs)
+upon
+volume
+of
+!ndings,
+many
+of
+which
+are
+false
+positives
+(FPs)
+upon
+is improperly
+handled
+a program,
+to potential
+secuoften
+handleswithin
+user input,
+without leading
+proper validation
+vulnerabilities
+manual
+inspection.
+This
+securityanalysts
+analysts
+manual
+inspection.
+Thissignificantly
+signi!cantly burdens
+burdens security
+can example,
+occur, suchinasthe
+bu#er
+over"ows
+[31,call
+51].
+rity risks. For
+Linux
+kernel,and
+thein!nite
+ioctl loops
+system
+developers.
+B!"L#$%
+aimstotobridge
+bridge this
+this gap
+gap by
+developers.
+BugLens
+aims
+byintroducing
+introducinga a
+focus
+on without
+taint bugsproper
+for several
+reasons.
+First, a wide vari- and and
+often handlesWe
+user
+input,
+validation
+vulnerabilities
+methodology for more precise, context-aware evaluation of potenety ofas
+security
+be modeled
+as taint
+can occur, such
+buffer vulnerabilities
+overflows andcan
+infinite
+loops [31,
+51].problems, methodology for more precise, context-aware evaluation of potential taint-style
+vulnerabilities,leveraging
+leveraging Large
+Large Language
+including
+bu#er
+over"ows,
+integer
+over"ows,
+use-after-free,
+and
+tial
+taint-style
+vulnerabilities,
+LanguageModels
+Models
+We focus on taint bugs for several reasons. First, a wide vari(LLMs)
+in
+a
+guided
+manner.
+other memory corruption issues. Second, taint analysis provides a (LLMs)
+in a guided manner.
+ety of security vulnerabilities can be modeled as taint problems,
+Figure 1 shows a simpli!ed code snippet from the Android kernel.
+well-de!ned conceptual framework for reasoning about data "ow
+Figure
+1 shows a simplified code snippet from the Android kernel.
+including buffer
+overflows, integer overflows, use-after-free, and
+The function is called with an array of tainted variables *values
+from untrusted sources to sensitive operations (sinks). Third, the
+The
+function
+is called with an array of tainted variables *values
+other memory
+issues.
+Second,
+provides
+a
+(Note: the address represented by values is not tainted, but its containt corruption
+static analysis
+is both
+practicaltaint
+and analysis
+widely adopted
+in security
+(Note:
+the
+address
+by values
+is retrieved
+not tainted,
+but its conwell-defined
+conceptual
+framework
+for reasoning
+about data
+tents are, from represented
+a copy_from_user).
+Thus,
+by GET_NEXT,
+tools.
+These make
+taint analysis
+an ideal foundation
+for flow
+our work.
+tents
+are,
+from
+a
+copy_from_user).
+Thus,
+retrieved
+by
+GET_NEXT,
+from untrusted
+sources
+to
+sensitive
+operations
+(sinks).
+Third,
+the
+Suture [51] is a state-of-the-art static analysis tool designed
+the variable nums and command_id are tainted as well.
+Static
+nums
+command_id
+tainteddetectors:
+as well. Static
+taint static speci!cally
+analysis is both
+practicaltaint-style
+and widely
+adopted in security
+for detecting
+vulnerabilities
+in the Linux the variable
+analysis may
+"ag and
+potential
+bugs for theare
+following
+flagstatic
+potential
+bugs formight
+the following
+detectors:
+kernel.
+employs
+a taint-tracking
+approach to
+potential analysis
+A may
+standard
+taint analyzer
+"ag the following
+issues:
+tools. These
+makeIttaint
+analysis
+an ideal foundation
+foridentify
+our work.
+vulnerabilities
+by analyzing the
+"owanalysis
+of untrusted
+through the
+Tainted static
+Loop Bound
+(TLB): At
+line 10,
+thethe
+loop
+iterates based
+A•standard
+taint analyzer
+might
+flag
+following
+issues:
+Suture [51]
+is a state-of-the-art
+static
+tooldata
+designed
+code. Suture
+precisely tracks
+how data from
+on theLoop
+tainted
+variable(TLB):
+nums At
+. A line
+very 10,
+large
+value
+nums (e.g.,
+Bound
+the
+loopforiterates
+based
+specificallykernel
+for detecting
+taint-style
+vulnerabilities
+in user
+the inputs,
+Linux such • Tainted
+as those passed
+via the ioctl
+system call,
+propagates
+through variclose
+to INT_MAX)
+could
+lead. Atovery
+excessive
+on the
+tainted
+variable
+nums
+large iteration,
+value forpotentially
+nums (e.g.,
+kernel. It employs
+a taint-tracking
+approach
+to identify
+potential
+ous functions and data structures, "agging any instances where this
+a Denial-of-Service
+or creating
+conditionspotentially
+for other
+closecausing
+to INT_MAX)
+could lead(DoS)
+to excessive
+iteration,
+vulnerabilities by analyzing the flow of untrusted data through the
+tainted data could lead to security issues based on their detectors.
+vulnerabilities.
+causing a Denial-of-Service (DoS) or creating conditions for other
+kernel code. Suture
+precisely
+tracks
+how
+data
+from
+user
+inputs,
+such
+Notably, Suture is an advanced taint analysis tool that can even
+• Tainted Pointer Dereference (TPD): At lines 11, the GET_NEXT
+vulnerabilities.
+as those passed
+viamulti-entry
+the ioctl data
+system
+call,which
+propagates
+through
+varianalyze
+"ows,
+means it
+can track
+tainted
+macro is called. Inside this macro (line 4), the tainted pointer
+Pointer
+Dereference
+At lines
+11, theafter
+GET_NEXT
+ous functions
+data structures,
+any instances
+where thisit still • Tainted
+dataand
+propagating
+throughflagging
+multiple system
+calls. Nevertheless,
+values
+(represented
+as ptr) is (TPD):
+dereferenced
+(*ptr++)
+being
+macro
+is called. Since
+Insidethe
+this
+macroof(line
+4), thedepends
+tainted on
+pointer
+tainted datafaces
+could
+lead to security
+issues
+based on whether
+their detectors.
+challenges
+in accurately
+determining
+the identi!ed
+incremented.
+number
+increments
+the
+values (represented as ptr) is dereferenced (*ptr++) after being
+Notably, Suture is an advanced taint analysis tool that can even
+incremented. Since the number of increments depends on the
+analyze multi-entry data flows, which means it can track tainted
+data propagating through multiple system calls. Nevertheless, it still
+loop controlled by tainted nums , the pointer values in the
+faces challenges in accurately determining whether the identified
+iteration is tainted as well (an implicit taint propagation). Therepotential bugs are indeed exploitable, and still require considerable
+fore, it could be reported as a tainted pointer dereference, which
+2
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+may potentially lead to an out-of-bounds or arbitrary memory
+access.
+
+Consequently, warnings are generated for potential vulnerabilities on these infeasible paths, significantly inflating the false positive count. For example, an analyzer might flag the TPD scenario
+as dangerous without determining if the tainted pointer has been
+properly checked with its legal bounds before dereferencing. This
+imprecision results in a high volume of false positives, and forces
+developers to manually trace complex paths and data constraints
+to determine feasibility, undermining the efficiency of automated
+analysis.
+
+2.2.1 Ground Truth Analysis. However, a deeper analysis reveals a
+more nuanced reality:
+• The TLB is a potential true positive. If nums is extremely large,
+but the data in values remains within the bounds defined by
+MAX_PP_PARAMS_SZ for many iterations, the loop can run for a
+long time. If the read command_ids are invalid (triggering the
+default case and continue on line 18), the if (rc) check on
+line 20 is bypassed for those iterations. The loop only terminates
+when i reaches nums. An extremely large nums could thus cause
+excessive computation, leading to a DoS.
+• The TPD is a false positive. The potential out-of-bounds read
+is prevented by the explicit bounds check within the GET_NEXT
+macro itself (line 3). It compares the incremented pointer address against the calculated param_max_offset (derived from
+the known buffer size MAX_PP_PARAMS_SZ) before the dereference
+occurs (line 4). If the check fails, rc is set, and the dereference is
+skipped.
+
+2.3
+
+2.4
+
+The Opportunity in LLMs
+
+Recent advances in Large Language Models (LLMs) offer a promising avenue to address these challenges, particularly in post-refining
+the results generated by scalable static analyzers. Trained on vast
+amounts of code and natural language, LLMs exhibit remarkable
+capabilities relevant to overcoming the limitations described above:
+• Enhancing Vulnerability Modeling (Addressing C1): LLMs
+possess a nuanced understanding of code semantics, common
+programming patterns, and API usage [22, 28, 30, 34]. They can
+potentially recognize complex or subtle vulnerability indicators
+that are difficult to capture with predefined simplified heuristics.
+By analyzing code context (including comments and variable
+names), LLMs might differentiate between genuinely unsafe patterns and benign ones.
+• Refining Path and Data Constraints (Addressing C2): While
+not performing formal reasoning, LLMs can leverage their semantic understanding to assess the feasibility of paths and data
+flows flagged by static analysis. They might leverage contextual
+information to determine if the flagged bug is likely infeasible
+in practice, thereby helping to prune false positives arising from
+coarse path and data constraint analysis.
+
+Challenges in Static Analysis
+
+Our motivating example, involving the analysis of TLB and TPD
+(illustrated in Figure 1), highlights the specific challenges stemming
+from this precision gap, which BugLens aims to address.
+2.3.1 Challenge 1: Simplified Vulnerability Modeling. A primary
+source of imprecision is the reliance on simplified vulnerability
+detection modeling. To maintain scalability and avoid missing potential bugs, static analyzers may use overly simplified rules. For
+instance, an analyzer might flag any tainted pointer in the loop
+bound conditions as a potential DoS vulnerability, without considering the properties of the loop, such as the TLB example. Similarly,
+flagging all arithmetic operations involving tainted variables as
+potentially overflowing ensures coverage but generates noise.
+The difficulty lies in defining and implementing effective and
+comprehensive rules within traditional static analysis frameworks.
+Vulnerabilities manifest in diverse and subtle ways. Consider the
+TLB example: a tainted loop bound might lead to Denial-of-Service
+(DoS) directly through excessive iterations, e.g., while (i < nums)
+where nums is tainted and set to a large value. Alternatively, the DoS
+might also happen when the tainted data is used in loop control
+statement such as continue or break. Precisely encoding rules to
+capture the vast number of unsafe code patterns, subtle contextual
+factors, and the impact of complex control flow is extremely challenging. As a result, this reliance on simplified heuristics inevitably
+leads to false positives in static analysis for security vulnerability
+detection.
+
+2.4.1 Challenge 3: Reasoning Hurdles for LLMs. Despite their potential, LLMs are not inherently suited for rigorous program analysis
+tasks out-of-the-box. Their reasoning can be fragile when dealing with complex program dependencies, and they lack systematic
+constraint-solving mechanisms. Simply asking an LLM a high-level
+question like “Is this static analysis warning a true positive?” often
+yields unreliable results.
+Specifically, LLMs (even the most advanced ones, see §5.4) may
+struggle with intricate control and data flow dependencies. For
+instance, when analyzing the TLB example (Figure 1), an LLM
+might observe sanity checks on the tainted data and incorrectly
+conclude the warning is a false positive:
+"There are sanity checks for the bound value... if the
+check fails, an error code is set, and the function jumps
+to cleanup... Therefore, the tool’s warning appears to be
+a false positive."
+
+2.3.2 Challenge 2: Over-Approximation of Constraints. The second
+major source of imprecision is the over-approximation of path and
+data constraints. To avoid the exponential complexity of exploring
+all possible execution paths and data states, static analyzers make
+coarse assumptions about path feasibility and data flow. While
+essential for scalability, this over-approximation means the analysis often considers execution paths that are actually infeasible in
+practice.
+
+However, as shown in the example, the LLM might fail to recognize that a continue statement within the loop body bypasses
+these checks under certain conditions, potentially allowing the infinite loop to occur. This highlights a critical limitation: LLMs may
+overlook the precise implications of control flow structures and data
+dependencies, leading to flawed conclusions.
+Therefore, effectively leveraging LLMs for refining static analysis
+requires more than simple prompting. It necessitates a structured
+3
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+approach that guides the LLM’s reasoning process, teaching it relevant program analysis concepts and focusing its attention on critical
+code features and dependencies. This challenge motivates the design of our BugLens framework, which aims to orchestrate LLM
+analysis for reliable post-refinement.
+
+2.5
+
+buffer overflow, infinite loop, or other dangerous operations that
+could compromise the kernel when manipulated with malicious
+input.
+As mentioned in §2, the goal of BugLens is to facilitate the
+(scalable but imprecise) static analysis of taint-style vulnerabilities
+by leveraging LLMs in a more effective way.
+
+Our Approach
+
+The challenges outlined in our motivation, namely the imprecision
+stemming from Simplified Vulnerability Modeling (C1) and OverApproximation of Constraints (C2) in scalable static analysis, and
+Reasoning Hurdles for LLMs (C3) necessitate a new strategy to tackle
+these challenges. To address these, we introduce BugLens, a framework designed specifically as a post-refinement for results from
+traditional static analyzers.
+BugLens’s primary goal is to enhance the precision of static
+analysis by filtering their imprecise analysis results. The framework comprises the following components, each targeting specific
+challenges:
+• Security Impact Assessor (SecIA): Addressing Simplified Vulnerability Models (C1). Instead of relying solely on predefined
+patterns, it uses LLMs to analyze the potential security impact if
+tainted data identified by static analysis were completely controlled by an attacker. It then evaluates whether the tainted value
+could potentially lead to security vulnerabilities (e.g., memory
+corruption, DoS), as detailed in §3.2. By focusing on semantic
+consequences rather than simplified heuristics, SecIA provides a
+more precise assessment of security impact, overcoming C1.
+• Constraint Assessor (ConA): Addressing Over-Approximation
+of Constraints (C2). ConA performs a targeted analysis of the
+(semantically) relevant constraints (e.g., sanitizers) along the data
+flow path (§3.3). It first identifies and collects the relevant constraints, then assesses whether these constraints effectively prevent the triggering of the specific vulnerabilities. The evaluation
+helps filter out false positives due to the over-approximation of
+path and data constraints, which are inherent in scalable static
+analysis (C2).
+• Structured Analysis Guidance (SAG): Addressing Reasoning
+Hurdles for LLMs (C3). Simply prompting LLMs for analysis is
+unreliable due to their potential to overlook complex control
+and data dependencies. SAG is designed to mitigate this (C3). It
+provides structured analysis guidance to the LLMs performing
+ConA. Leveraging domain knowledge from program analysis,
+SAG employs carefully constructed prompts and few-shot examples. SAG instantiates key analysis principles, demonstrating
+how to systematically dissect code, trace dependencies, and evaluate conditions, especially in complex scenarios. This guidance
+steers the LLM towards a more rigorous and reliable analysis
+process, making the use of LLMs within BugLens effective.
+
+3.1.2 Direct Prompt & Design Rationale. Our investigation reveals
+fundamental limitations in simply asking LLMs to evaluate static
+analysis results directly. When presented with potential vulnerabilities identified by static analysis tools, a naive approach would be
+to directly prompt the LLM with questions like “Is this code vulnerable?” while providing the static analysis report and relevant code
+context. We term this basic approach the Direct Prompt.
+Our experiments (detailed in §5.4) demonstrate that such Direct
+Prompts lead to a concerning number of false negatives — cases
+where the LLM incorrectly classifies actual vulnerabilities as safe
+code. The Direct Prompt approach, while intuitive, proves unreliable
+for vulnerability detection.
+We hypothesize that this limitation stems from the fundamental
+nature of current LLMs. Trained primarily on predicting the next
+token based on vast datasets, these models excel at recognizing
+common syntactic and semantic patterns. However, this strength
+can become a weakness in complex analysis tasks. LLMs may develop heuristics based on surface-level features [32]; for example,
+identifying the presence of a “sanity check” construct often correlates statistically with safe code in training data. Consequently, the
+model might classify code containing such a check as safe without
+performing the deeper reasoning required to determine if the check
+is actually effective under all relevant execution paths. Real-world
+vulnerabilities often exploit exactly these scenarios: checks that are
+bypassable, incomplete, or rendered ineffective by intricate control
+and data flows. The model’s tendency to rely on learned statistical
+correlations [38], potentially driven by attention mechanisms prioritizing frequent patterns, may cause it to overlook these critical
+dependencies.
+To address these reasoning limitations, we propose Structured
+Analysis Guidance (SAG) - a structured approach for guiding
+LLMs toward more rigorous and effective vulnerability analysis:
+• Guided Stepwise Vulnerability Analysis: We design Constraint Assessor (ConA) as a four-stage process that mirrors
+static analysis process. This stepwise workflow guides the LLM
+through: (1) identifying vulnerability reachability conditions, (2)
+collecting relevant constraints along taint paths, (3) summarizing each constraint’s preconditions and postconditions, and (4)
+evaluating whether these constraints effectively prevent the vulnerability. This systematic approach helps overcome the LLM’s
+tendency toward shortcut reasoning. We detail this workflow in
+§3.3.
+• Guided Path Condition and Data Constraint Analysis: To
+address challenging analysis where implicit path conditions and
+data constraints often elude naive prompting, we provide the
+LLM with detailed guidance and few-shot examples, which explicitly direct the LLM through analyzing complex control flow
+constructs, distinguishing between different types of constraints,
+
+3 Design
+3.1 Overview and Approach
+3.1.1 Problem Scope & Goal. In this paper, we focus on identifying
+and analyzing taint-style vulnerabilities in operating system kernels. These vulnerabilities arise when untrusted data flows from
+external sources (e.g., ioctl() calls) to security-critical operations.
+A security-critical operation could be memory corruption such as
+4
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+SAG (Section 4.4)
+
+3.2.1 Core Assumption and Rationale. SecIA operates on a fundamental assumption regarding attacker capability at the point of initial impact assessment: Aribitary Control Hypothesis (AC-Hypo).
+For a given program location 𝐾 where static analysis reported an
+operation 𝑂𝑝 (𝑣) involving tainted data 𝑣 (the sink), (1) we hypothesize that an attacker can control 𝑣 to take any value 𝑣𝑎𝑡𝑘 (within
+the constraints of its data type), and (2) we provisionally ignore any
+effects of checks or path conditions (even explicit checks) encountered on analysis. In other words, we assume that the attacker can
+take any value to anywhere (successors of the sink node in the
+control flow graph).
+This hypothesis enables SecIA to streamline analysis. By assuming the attacker achieves both arbitrary value control and can
+always reach the potential vulnerability, SecIA focuses solely on
+potential security impact. This permits early filtering of findings
+based purely on consequence, (safely) reducing subsequent analysis load. Critically, this approach defers the complex validation
+of actual program constraints—including path feasibility, value
+ranges, and importantly, whether those potentially protective checks
+or sanitizers can be manipulated through tainted data. This deferral
+mitigates false negatives (FNs) by preventing premature dismissal
+of vulnerabilities due to reliance on potentially bypassable checks
+or inaccurate LLM constraint reasoning about their effectiveness.
+The effectiveness of this design in reducing FNs is validated experimentally in §5.4.2.
+For instance, in our motivating example, a simple analysis might
+deem the Tainted Loop Bound (TLB) on nums safe (i.e., not a bug)
+due to the goto statement potentially preventing an infinite loop
+condition. On the other hand, SecIA’s approach, guided by the
+AC-Hypo, intentionally ignores the effect of the goto statement at
+this stage (as its condition depends on the tainted data command_id)
+and proceeds to identify potential downstream effects (e.g., DoS)
+resulting from an arbitrarily large nums. The analysis of whether
+the goto check can indeed be bypassed under feasible program
+conditions is deferred.
+
+SecIA (Section 4.2)
+Hypothesize Arbitrary control
+🤔 “What if the the tainted data is arbitrary?…”
+
+Security Impact Analysis
+Trace consequential data low
+⚠ Identify all critical operations (CO)
+
+ConA (Section 4.3)
+CO Reachability Analysis
+
+⓸
+
+Final Vulnerability Eval
+
+“…for bypass you should
+negate the condition…”
+
+Data Constraint
+“…carefully di erentiate
+sanitization/validation…”
+
+PKA (Section 4.5)
+“… if you feel uncertain, you
+could ask me for more function
+de inition… ”
+
+…
+
+⓵
+
+Path Condition
+
+ff
+
+f
+
+Codebase
+
+Figure 2: Overview of BugLens, showing (1) Security Impact Assessor (SecIA)
+first assesses the security impact of the potential bugs identified by static
+analysis, and then (2) Constraint Assessor (ConA) assesses the data constraints
+and evaluates if the bug is feasible. ConA is guided by (3) Structured Analysis
+Guidance (SAG) to reason on the code more effectively, and can interact with
+the (4) Project Knowledge Agent (PKA) to get information about the codebase
+on-demand.
+
+and properly evaluating their effectiveness. This in-context learning approach helps the LLM identify subtle vulnerabilities. We
+elaborate on these techniques in §3.4.
+3.1.3 Design Components. Besides prompting LLMs with SAG, the
+rest of the BugLens framework consists of three components, as
+shown in Figure 2:
+• Security Impact Assessor (SecIA): This component evaluates
+the security impact of the potential bugs identified by static analysis. It identifies the Critical Operations (COp ) that are influenced
+by the tainted data and filters out benign patterns.
+• Constraint Assessor (ConA): This component performs a
+multi-step analysis to evaluate the feasibility of the potential
+bugs. It collects the path conditions and data constraints,
+summarizes them, and evaluates whether they are effective in
+preventing the vulnerability.
+• Project Knowledge Agent (PKA): This component allows the
+LLM to access the codebase on-demand, enabling it to retrieve
+global codebase information.
+Additionally, BugLens also adopts some commonly-used
+prompting techniques, such as (1) Majority-vote querying, where
+we query the model multiple times and take the most common
+answer; (2) Chain-of-Thought (CoT) prompting [44]; and (3)
+Schema-constrained summarization, where a follow-up prompt
+requests the model’s own output in a fixed XML format, making
+LLM’s response easy to parse for subsequent steps.
+
+3.2
+
+3.2.2 Workflow. SecIA analyzes each location 𝐾 reported by the
+static analysis Taint Sink finding:
+• Forward Influence Analysis: Suppose the tainted data 𝑣 is
+hypothetically controlled by an attacker as 𝑣𝑎𝑡𝑘 , and the 𝑂𝑝 (𝑣)
+is a taint sink 𝐾 identified by static analysis. Starting from the
+result of 𝑂𝑝 (𝑣𝑎𝑡𝑘 ) at location 𝐾, trace how this tainted value
+propagates or influences subsequent program execution.
+• Identify Influenced Critical Operations: From the forward
+analysis, SecIA first pinpoints critical operations that are affected
+by the hypothetical attacker-controlled value 𝑣𝑎𝑡𝑘 . The analysis
+focuses on operations relevant to known vulnerability classes
+such as memory safety (e.g., arbitrary memory access) and DoS
+(e.g., insecure loop bounds).
+• Filter Benign Operations: SecIA leverages LLM-driven semantic understanding to distinguish and filter out operators that are
+actually benign. For instance, while the system flags potential
+risks when 𝑣𝑎𝑡𝑘 impacts sensitive operations like array indexing
+(e.g., a[v]), it deliberately ignores cases recognized as safe, such
+as routine data structure traversals or searches (e.g., comparing
+
+Security Impact Assessor (SecIA)
+
+The core insight behind SecIA is based on the fundamental evaluative question: What are the consequences if tainted data assumes
+arbitrary values?
+5
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+element.id to v, a complete example appaers in §5.6). This selective filtering directs subsequent analysis (§3.3) to concentrate
+on issues that are more likely to present genuine security risks.
+• Output. The set of influenced Critical Operations identified in the
+last step. This set represents the downstream locations potentially
+impacted by the originally tainted data 𝑣 under the arbitrary
+control assumption.
+In the Forward Influence Analysis step, the LLM is leveraged to
+identify potential influences, including indirect taint propagation.
+For example, in the motivating example, the LLM can recognize
+that the incremental pointer values is indirectly influenced by
+the tainted data nums through the GET_NEXT(). By doing so, SecIA
+can even identify unique bugs that are not directly related to the
+taint source (albeit we currently don’t have any such bugs in our
+experiments).
+
+3.3
+
+1
+
+2
+
+3
+
+COp Reachability Analysis:
+x ≤ 100 ∧ oc ≠ SKIP
+Constraint Collection: check_x
+Constraint Effect Summarization
+[ < Pre(π1): oc = SKIP,
+Post(π1): x ∈ (−∞, +∞) > ...
+< Pre(π4): oc ≠ SKIP ∧ c ∉ {1, 2},
+Post(π4): x ∈ (−∞, +∞) > ]
+
+4
+
+Final Vuln Eval: not a bug
+
+Figure 3: The workflow of Constraint Assessor (ConA)
+
+Constraint Assessor (ConA)
+
+validation functions—that appear intended to act as constraints
+on the tainted data’s value or range before it is used at the COp .
+• Step 3: Constraint Effect Summarization. Each potential constraint identified in Step 2 is then analyzed in detail. This step
+aims to understand the constraint’s specific effect: Under which
+conditions (its activation precondition) does the constraint apply,
+and what impact does it have on the tainted variable’s possible
+numerical range (its range effect postcondition)?
+• Step 4: Final Vulnerability Evaluation. Finally, it performs a
+reasoned evaluation to determine if the vulnerability can be triggered. If still triggerable, the finding is classified as a “Potential
+Vulnerability.” Otherwise, if the LLM determines that the constraints effectively prevent the vulnerability from being triggered,
+the finding is classified as “Eliminated.”
+This workflow leverages LLMs to interpret code, identify relevant
+patterns and constraints, and perform the heuristic reasoning required for each step. The following subsections (§3.3.3 through
+§3.3.6) elaborate on the specific design, rationale, heuristic considerations, and soundness implications inherent in each stage of this
+analysis process.
+
+The Constraint Assessor (ConA) aims to identify whether the bug of
+COp can be triggered by analyzing the data constraints.
+3.3.1 Design Rationale: Precondition and Postcondition of Constraints. As potential vulnerabilities often persist because the data
+constraints intended to prevent them are not truly effective in the
+specific context where the tainted data is used §3.1.2. Simply identifying the presence of a check or sanitization routine is insufficient.
+To rigorously evaluate effectiveness and guided by the paradigm of
+formal methods, the ConA is designed to determine:
+• Precondition. A constraint might exist in the code but be bypassed on a specific execution path leading to the potential vulnerability, or its activation might depend on configuration or
+state variables that are not set appropriately. Analyzing the Precondition, the conditions necessary for the constraint’s logic to
+execute addresses this.
+• Postcondition. Even if a constraint is activated, it might not
+be strict enough to prevent the specific value or range required
+to trigger the bug (e.g., checking x < 200 is ineffective if the
+vulnerability can happen if x > 100). Analyzing the Postcondition,
+the effect on the data’s possible values or state after the constraint
+operates addresses this.
+Therefore, collecting and reasoning about both the Preconditions
+and Postconditions of constraints along the taint flow is essential
+for ConA to move beyond superficial checks and accurately assess
+whether the existing safeguards collectively guarantee the elimination of the vulnerability at the critical operation. This detailed
+steps is described in the following sections.
+
+3.3.3 Step 1: Critical Operation Reachability Analysis. The analysis begins by determining the conditions required for program
+execution to reach the specific Critical Operation (COp ) location
+previously identified by SecIA as potentially vulnerability. These
+reachability conditions form the base constraints that must be satisfied for the vulnerability to be triggerable via this COp .
+Condition Representation: When analyzing path conditions,
+we allow the LLM to generate natural language summaries that
+capture the semantic meaning of complex reachability conditions.
+For instance, where traditional analysis might struggle, an LLM
+might identify a condition like: “The operation is only executed if
+init_subsystem() returned zero (success), AND the device state in
+dev->status equals STATUS_READY.”
+The LLM is then tasked (in Step 4) to evaluate these semantic
+constraints to assess potential impact. The natural language representation allows the LLM to leverage its understanding of the
+code’s intent and context, but introduces a higher degree of heuristics and potential uncertainty into the final evaluation, which must
+be acknowledged.
+
+3.3.2 Overview of Workflow. As shown in Figure 3, the Constrant
+Assessor involves a four-step, LLM-guided workflow:
+• Step 1: Critical Operation Reachability Analysis. The process begins by determining the conditions under which program
+execution can reach the specific Critical Operation (COp ) location.
+This establishes the base requirements for the vulnerability to
+be possible.
+• Step 2: Backward Constraint Collection. Next, the analysis traces the tainted data flow path(s) backward from the COp
+towards the data’s source. Along this path, it identifies code segments—such as conditional statements, assertions, or calls to
+6
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+3.3.4 Step 2: Backward Constraint Collection. Once the Critical
+Operation (COp ) and its local reachability conditions are identified,
+the next step is to gather potential constraints imposed on the
+tainted data before it reaches the COp . This involves tracing the
+data flow path(s) for the tainted variable backward from the COp
+toward its source(s).
+Leveraging Code Context and Structure: The LLM is tasked with
+identifying validation and sanitization operations of the tainted
+data. Specifically, the LLM looks for:
+• Conditional branches (if, switch) whose conditions involve the
+tainted variable or related data.
+• Assignments or operations that transform the tainted data.
+• Function calls that take the tainted data (or related data) as arguments.
+Heuristic Identification in Domain Context: Unlike formal symbolic execution, which aims to exhaustively collect all mathematically precise path conditions, this LLM-based collection is heuristic.
+It may not identify every constraint on all possible paths. However,
+we leverage the LLM’s pattern recognition capabilities, particularly
+within our target domain (Linux kernel). The prompt encourages
+the LLM to pay attention to common kernel patterns, naming conventions (e.g., functions named check_..., validate_...), and
+comments that often signify sanitization or validation routines,
+even if they are complex to model formally. This allows the LLM to
+identify likely and semantically significant constraints that purely
+syntactic approaches might suffer from path explosion.
+Example: (Figure 3) Tracing back from critical_op(x) in
+caller(), the LLM identifies the call check_x(...) to be a
+potential constraint on x. It would then query the Information
+Agent for the definition of check_x() to analyze its body (as
+detailed in Step 3)
+
+Table 1. The precondition and postcondition pairs for the check_x function.
+The oc and c stand for other_config and config respectively.
+
+3.3.5 Step 3: Constraint Effect Summarization. After collecting potential constraining code segments (like the function check_x) in
+Step 2, this step analyzes the effect of these segments on the tainted
+variable. The goal is to understand how different execution paths
+within these segments modify the possible range of the tainted
+variable, and under which conditions (preconditions) those paths
+are taken.
+Traditional formal methods, like symbolic execution combined with abstract interpretation, analyze such segments
+rigorously. However, to ensure soundness and termination,
+particularly with loops or complex arithmetic, they often employ
+over-approximations for numerical ranges. While guaranteeing
+soundness (no false negatives), this necessary conservatism can
+sometimes limit precision, failing to prove tight constraints that
+actually hold, thus potentially leading to false positives later.
+BugLens utilizes the LLM. We prompt the LLM to interpret the
+control flow and data transformations within the identified constraint
+segment to heuristically estimate the range effects. The prompt
+asks the LLM to first identify all major execution paths through the
+provided code segment (e.g., the body of check_x), and then:
+• For each path, determine the Path Condition (Precondition): The
+conditions on the parameters or relevant program state required
+to take the path.
+• For each path, determine the Estimated Effect on Tainted Data
+(Postcondition): Analyze operations like assertions (assert(x >
+
+3.3.6 Step 4: Final Vulnerability Evaluation. This final step synthesizes the findings from the previous analyses to determine if
+the identified constraints effectively neutralize the potential vulnerability associated with the Critical Operation (COp ). The goal
+is to classify the initial finding as either “Eliminated” (constraints
+provably prevent the the vulnerability happening) or "Potential
+Vulnerability" (no such guarantee found).
+Specifically, the LLM is guided to perform the following assessment:
+• Analyze Constraint Activation: The first step is to determine
+if the precondition (after considering user/kernel control effects)
+is implied by the known COp ’s Reachability Conditions. If it is,
+the constraint is active as an effective constraint. Otherwise, we
+need to further analyze its activation based on the following
+heuristic.
+• Heuristic to Untainted Data: For untainted data, use the heuristics (e.g., variable name, __user flag) to determine if the variable
+can be controlled by user, then use the worst-case assumption
+that the user can manipulate these variables and analyze if the
+precondition can be unsatisfied. And a possibility of unsatisfied
+precondition makes the constraint disqualified.
+• Analyze Constraint Effectiveness: Next is to determine if the
+postcondition of the remaining active constraints
+prevents the Bug Condition of the COp from ever being satisfied.
+For example, if the vulnerability happens when idx < 0 and the
+
+Path
+
+Precondition
+
+Postcondition
+
+𝜋1
+𝜋2
+𝜋3
+𝜋4
+
+oc = SKIP
+oc ≠ SKIP ∧ c = 1
+oc ≠ SKIP ∧ c = 2
+oc ≠ SKIP ∧ c ∉ {1, 2}
+
+𝑥 ∈ (−∞, +∞)
+𝑥 ∈ (0, 100)
+𝑥 ∈ (0, +∞)
+𝑥 ∈ (−∞, +∞)
+
+0)), assignments (x = sanitize(x)), and comparisons to infer
+the resulting constraint on the tainted variable’s range.
+Example: (Figure 3) For the function check_x in our example, the
+goal is for the LLM to output a summary similar to Table 1, which
+maps path conditions (preconditions) to range effects (postconditions). The path 𝜋1 and 𝜋 4 are bypass paths, which means that the
+check_x function will not effectively limit the range of x.
+Heuristic Nature and Soundness Trade-offs: This step relies on
+the LLM’s code interpretation capabilities and is heuristic, particularly in its estimation of range effects and its handling of complex
+control flow. Similarly to the Step 1, these summaries could also be
+represented in natural language, which brings more flexibility but
+also more uncertainty.
+Rationale: We employ this LLM-based heuristic approach acknowledging the trade-offs. It aims to overcome the potential precision
+limitations of conservative formal abstractions and achieve broader
+applicability in the complex Linux kernel domain, where precise,
+scalable formal analysis is challenging. The goal is significantly
+improved precision (fewer FPs) compared to baseline static analysis,
+accepting a carefully managed risk of heuristic errors (potential
+FNs). The practical rate of False Negatives is thoroughly examined
+in our experimental evaluation in §5.3 and §5.5.
+
+7
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+constraint’s effect is estimated as idx in [0, 100], the vulnerability
+is prevented.
+Soundness Implications: This final evaluation relies on the LLM’s
+ability to perform heuristic logical reasoning. As a result, this step
+may introduce the following concerns: (1) The heuristic to untainted data (worst-case assumption for user control) may underestimate/overestimate constraint effectiveness, (2) errors in the
+LLM’s logical reasoning, range comparisons, or handling of complex conditions could lead to classification errors, and (3) it inherits
+any potential unsoundness from Step 3 caused by incorrect range
+estimations or missed bypass conditions .
+
+3.4
+
+• Type constraints. The variable’s static type already restricts its
+range (e.g., uint8 is always in the range of [0, 255]).
+• Validation (transferable to source). The program tests the
+value and aborts or reports an error if the test fails, without
+modifying the value. Because the check refers to the current value,
+the knowledge gained from this check (e.g., “the value must
+be ≥ 0 on the success branch”) also applies to all source variables
+that influenced this value in the data flow.
+• Sanitization (not transferable to source). The program writes
+a new, corrected value back to the variable (e.g., clamping it to
+a range). This operation severs the connection to the original
+value, so any property we learn afterwards applies only to the
+sanitized copy, not to the original source variables in the data
+flow.
+The key difference is that validation knowledge travels backward
+along the data-flow graph, while sanitization overwrites the flow
+and stops the transfer.
+
+Structured Analysis Guidance (SAG)
+
+To enable the LLM to effectively perform the code analysis tasks
+in ConA, we employ Structured Analysis Guidance (SAG) — a
+prompting strategy with structured reasoning templates and fewshot examples. SAG provides: (1) Guided Stepwise Vulnerability
+Analysis with step-by-step instructions that decompose complex
+analysis tasks following established formal method principles (the
+analysis of precondition and postcondition, as described in §3.3),
+and (2) Guided Path Condition and Data Constraint Analysis
+demonstrating how to analyze challenging data constraints and
+path conditions from code, as described below.
+
+int foo(int v ) {
+int u = v + 1;
+if ( u < 0)
+return -EINVAL;
+
+// u is also tainted by v
+// (1) validation
+// succeeds only if u >= 0,
+// therefore v >= -1
+// now u is guaranteed 0..100,
+// and v >= -1
+
+return use( u , v );
+}
+
+3.4.1 Guided Path Condition Analysis. In the analysis of the path
+condition in Step 1 and Step 3 of ConA (§3.3.3 and §3.3.5), we
+guide the LLM using prompts designed to extract path conditions
+from the source code surrounding the operation of interest. For
+example, consider the path leading to the op(x) call within the
+caller function:
+
+Step (1) is a validation: it reads u and branches, so the fact
+‘ u ≥ 0’ (hence v ≥ −1) becomes part of the path condition and
+is transferable to other variables in earlier nodes ( u = v +1). Step
+(2) is a sanitization: it writes a new value into u ; the constraint
+“0 ≤ u ≤ 100” holds only after this assignment. It worth noting
+that the sanitization to u does not pose any constraints to v .
+However, if we replace the clamp() with an assert( u < 100),
+we would get a constraint of v as well, v < 99.
+
+void caller(int config, int other_config, int x ){
+check_x(config, other_config, x );
+if ( x > 100)
+goto invalid_label; // skip the op if true
+if (other_config != SKIP)
+op( x );
+// reach the op if true
+invalid:
+return;
+}
+
+3.5
+
+LLM Agent for Codebase Information
+
+Following recent work [26], we adopt an agentic design where the
+LLM acts as an interactive code analyst. It begins with a single
+function from the repository, identifies potential issues, and explicitly requests more context (e.g., other function definitions, struct
+layouts, global variables) if needed. The system then retrieves the
+relevant code snippet(s), and this iterative loop continues until the
+LLM has sufficient context to complete the analysis.
+We provide a set of request types (function definitions, struct
+layouts, global variables, etc.), enabling the LLM to gather broader
+codebase information at any point. This design is both flexible
+and extensible: new request types can be supported by adding
+corresponding backend callbacks.
+To facilitate these interactions, the knowledge retrieval system
+parses requests, locates relevant code, and formats responses for
+subsequent reasoning steps. We implement this system (about 500
+LOC in Python) on top of CodeQuery [23], extending its default
+functionality with custom handlers for specialized queries.
+
+SAG asks the LLM to identify and categorize:
+• Bypass Conditions: Identify conditional statements where taking a specific branch avoids the operation. The LLM is instructed
+to extract the condition and negate it to find the requirement for
+not bypassing the operation.
+Example: The condition x > 100 leads to invalid, bypassing
+critical_op( x ). The negated condition required to proceed
+towards the OP is x ≤ 100.
+• Direct Conditions: Identify conditional statements where taking a specific branch is necessary to reach the operation along
+the current path. The LLM extracts the condition directly.
+Example: Reaching sink(x) requires entering the if block, so the
+condition is other_config ≠ SKIP.
+The LLM then combines these elementary conditions using logical
+AND to form the path-specific reachability constraint set for the
+operation. For this path in the example, the derived reachability
+condition is: 𝑥 ≤ 100 ∧ other_config != SKIP.
+
+4
+
+3.4.2 Guided Data Constraint Analysis. In the analysis of data constraints in Step 2 and Step 3 of ConA (§3.3.4 and §3.3.5), We consider
+the following data constraints:
+
+Implementation
+
+BugLens is implemented with approximately 7k tokens (30k characters) in prompts (detailed in §B) and 2k lines of Python code that
+manages API requests and codebase querying functionality.
+8
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+4.1
+
+arXiv Preprint, Apr 2025, Earth
+
+Inferring Variable Names
+
+employed a subsequent semi-automated refinement process, reporting a reviewer-perceived FP rate of 51.23%. However, this
+figure relies on Suture’s broader definition of a bug, which classified all integer overflows as true positives. Furthermore, during
+our investigation, we identified 4 additional instances, initially
+dismissed as FPs by Suture authors’ verification, that were indeed
+real bugs (by either their standard or ours). This finding highlights potential inconsistencies in large-scale manual verification
+efforts.
+• CodeQL-SOD: We leverage CodeQL [15] as a complementary
+static analysis tool beyond Suture. Based on Backhouse et al.’s
+approach [2], we implemented a simple inter-procedural taint
+tracking analysis (CodeQL-SOD) that traces data flows from
+ioctl entry points to copy_from_user sink functions to detect
+potential stack overflows. Running CodeQL-SOD on the Linux
+device drivers, it yields 11 potential bug reports. Our manual analysis confirmed 1 of these as a true positive (consistent with the
+known stack exhaustion bug reported in [2]). This corresponds
+to an FP rate of 90.9%.
+
+Static analysis tools typically operate on compiler-generated IR
+code (like LLVM IR), which differs significantly from source code
+representation. Since BugLens analyzes source code directly, we
+need to map variables between these representations.
+The IR code provides line numbers that correspond to locations
+in the source code, along with data flow information. However, compiler optimizations often create, eliminate, or transform variables,
+making this mapping non-trivial. For example, LLVM might convert
+a simple ternary expression into a complex bitwise operation.
+We leverage LLMs to perform this variable name inference by
+providing them with: (1) the line number from source code and (2)
+the data flow from IR code. The LLM then identifies the corresponding source-level variables, effectively bridging the gap between
+IR-level analysis and source code understanding.
+
+5 Evaluation
+5.1 Research Questions
+Our evaluation aims to address the following research questions.
+• RQ1: (Effectiveness) How effective is BugLens in identifying
+vulnerabilities?
+• RQ2: (Component Contribution) How does the the prompt
+design affect the performance of BugLens? especially for the
+SecIA and SAG component?
+• RQ3: (Model Versatility) How does the performance of
+BugLens vary across different LLMs?
+
+5.2
+
+5.2.2 Cost. On average, the cost of running BugLens is about $0.1
+per case, under the latest version of OpenAI o3-mini. Each case
+takes about a few minutes to complete.
+
+5.3
+
+RQ1: Effectiveness
+
+Table 2. Performance of BugLens on top of Suture and CodeQL-SOD.
+
+Experimental Setup
+
+We primarily evaluate BugLens using OpenAI’s o3-mini model,
+specifically o3-mini-2025-01-31. This model was chosen as our
+primary focus because, as demonstrated in our evaluation for RQ3
+(Section 5.5), it achieved the best overall performance on our bug
+analysis task compared to several other recent leading models.
+To address RQ3 regarding the generalizability of BugLens,
+we also tested its performance with a range of prominent
+alternative models, encompassing both closed-source and opensource options. These include: OpenAI’s o1 (o1-2024-12-17),
+GPT-4.1 (gpt-4.1-2025-04-14), Google’s Gemini 2.5 Pro
+(gemini-2.5-pro-preview-03-25), Anthropic’s Claude 3.7
+Sonnet (claude-3-7-sonnet-20250219), The open-source
+DeepSeek R1 (671B) model. This selection allows us to assess how
+BugLens performs across different model architectures, sizes, and
+providers.
+
+Method
+
+TP
+
+TN
+
+FP
+
+FN
+
+Prec
+
+Rec
+
+F1
+
+Suture
+SutureRP
+SutureBugLens
+
+24
+20
+24
+
+0
+202
+218
+
+227
+25
+9
+
+0
+4
+0
+
+0.10
+0.44
+0.72
+
+1.00
+0.83
+1.00
+
+0.17
+0.58
+0.84
+
+CodeQL-SOD
+CodeQL-SODBugLens
+
+1
+1
+
+0
+9
+
+10
+1
+
+0
+0
+
+0.09
+0.50
+
+1.00
+1.00
+
+0.17
+0.67
+
+5.3.1 Precision and Recall. Table 2 shows the performance for the
+evaluated two static analyzers and our post-refinement method,
+BugLens. The results show BugLens significantly enhances precision of both Suture (0.10) and CodeQL-SOD (0.09). For CodeQL-SOD,
+the refinement (CodeQL-SODBugLens ) increases precision substantially to 0.50 while not missing any real bugs detected before. For
+Suture, the precision is increased to 0.72 due to a drastic reduction
+in false positives (from 227 to 9). This refinement does not miss any
+exisiting bugs.
+Moreover, noting that the semi-automated method in Suture,
+noted as SutureRP , actually shows a lower recall (0.83) than the
+BugLens refinement (1.0). This is because after examining the positive results of SutureBugLens , we found 4 cases of real bugs that were
+incorrectly classified as false positives during the manual inspection
+process in SutureRP . The results for SutureRP are estimated on the
+performance reported from its paper [51], as the semi-automated
+approach involves manual analysis steps that we did not replicate.
+
+5.2.1 Evaluation Dataset: Full Kernel Analysis with static analyzers. Our study utilizes the Android kernel (Linux version 4.14.150,
+Google Pixel 4XL), which served as the testbed in the original Suture study [51]. For our initial analysis, potentially informing RQ1
+regarding baseline performance and the challenges of automated
+bug detection in this complex environment, we applied prior static
+analysis tools, Suture and CodeQL-SOD, to the Linux kernel device drivers. The key findings from this analysis provide important
+context:
+• Suture: When applied to the Linux device drivers, Suture initially
+generated 251 potential bug reports. This raw output translates
+to a high False Positive (FP) rate of approximately 90%. Suture
+
+5.3.2 New Bugs. As mentioned in the previous part, we find 4 more
+cases that are actually real bugs, which are previously classified as
+false positive by human inspection in Suture. Two bugs are from
+the sound subsystem, reported to the maintainers, while waiting
+9
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+for their feedback. One of them involves a data constraint that
+appears to sanitize a tainted value but can be bypassed due to
+subtle control-flow logic.
+The other two bugs are from the i2c subsystem. They involve
+a condition where two tainted values must simultaneously satisfy
+specific constraints—a case that standard taint analyses typically
+miss due to their focus on single-source propagation.
+We have reported all cases following responsible disclosure. Full
+technical details will be made available after the issues are resolved.
+
+Takeaway. BugLens can effectively post-refine the results of
+exisiting static analyzers, hugely improving the precision, and
+can even find missed bugs.
+Table 3. Bug Analysis Performance Comparison Across LLMs and Design
+Approaches (Total Cases=120, Real Bugs=22)
+
+Model
+
+5.3.3 Analysis of FPs. Despite the general effectiveness of
+BugLens, it shows 10 FPs. Upon careful examination of these cases,
+we attribute the inaccuracies to several distinct factors:
+• Static Analysis Fundamental Limitations (5 cases): False positives
+arising from inherent limitations in the underlying static analyzers that BugLens is not designed to address. These include
+imprecisions in taint tracking through complex data structures,
+incorrect indirect call resolution, etc. BugLens intentionally operates on the dataflow provided by the static analyzers rather
+than attempting to verify the accuracy of this information itself.
+• Environment and Language Understanding (4 cases): Imprecision
+resulting from the LLM’s incomplete grasp of C language semantics, hardware-level interactions, and kernel-specific programming patterns.
+• Internal Modeling Errors (1 case): Inaccuracy originating from a
+faulty prediction by an internal analysis component (LLM).
+
+Full Design
+
+w/o SAG
+
+Baseline
+
+FN
+
+FP
+
+F1
+
+FN
+
+FP
+
+F1
+
+FN
+
+FP
+
+F1
+
+OpenAI o3-mini /
+
+0
+
+3
+
+0.94
+
+10
+
+1
+
+0.67
+
+18
+
+7
+
+0.24
+
+OpenAI o1 /
+OpenAI GPT-4.1 /
+Gemini 2.5 Pro
+Claude 3.7 Sonnet
+DeepSeek R1 /
+
+3
+1
+12
+13
+4
+
+6
+9
+3
+2
+7
+
+0.81
+0.81
+0.57
+0.54
+0.77
+
+8
+7
+14
+17
+10
+
+6
+7
+4
+2
+6
+
+0.67
+0.68
+0.47
+0.34
+0.60
+
+18
+3
+6
+1
+5
+
+6
+23
+24
+51
+42
+
+0.25
+0.59
+0.52
+0.44
+0.42
+
+Table 4. Performance of SecIA, with and without the Aribitary Control Hypothesis (AC-Hypo).
+
+Model
+
+5.3.4 Analysis of FNs. Despite the number of FN shown in the
+table 2 is 0, BugLens still produced several FNs but gets mitigated
+by majority voting. Specifically, we observed that the FNs were
+concentrated in the Constraint Assessor (ConA) component, and
+the SecIA component typically does not generate FNs due to the
+arbitrary control hypothesis (AC-Hypo), which will be discussed in
+§5.4.2 (we also provide a case study in §A).
+We identified two primary reasons for these FNs:
+• Overlooked Bypass Conditions: The LLM sometimes failed
+to recognize complex conditions allowing mitigations or checks
+within the code path to be bypassed, as discussed in §3.3.5.
+• Misinterpreting Validation vs. Sanitization: LLMs occasionally misclassified sanitization as validations, thereby missing
+vulnerabilities, as detailed in §3.4.
+These specific failure patterns observed within ConA were the
+direct motivation for designing the Structured Analysis Guidance
+(SAG). The SAG mechanism enhances the prompts used specifically
+within the ConA stage, providing targeted instructions aimed at
+guiding the LLM to avoid these identified pitfalls (e.g., explicitly
+probing for bypass logic, carefully differentiating data constraint
+types).
+The positive impact of SAG in mitigating these FNs is empirically
+demonstrated in RQ2 (§5.4). As shown in Table 3, the Full Design
+configuration (using ConA with SAG prompts) consistently yields
+fewer FNs.
+Nevertheless, SAG represents guidance, and its effectiveness is
+not absolute. The degree to which an LLM can accurately follow
+these complex instructions can vary, especially across different
+models. Our results (RQ2/RQ3, Table 3) indicate that while SAG
+provides significant benefits, some models may still struggle to fully
+leverage the guidance, potentially resulting in some residual FNs.
+
+w/o AC-Hypo
+FP
+
+w/ AC-Hypo
+
+FN
+
+Prec
+
+Rec
+
+FP
+
+FN
+
+Prec
+
+Rec
+
+OpenAI o3-mini
+
+13
+
+5
+
+0.57
+
+0.77
+
+38
+
+0
+
+0.37
+
+1.0
+
+OpenAI o1
+OpenAI GPT-4.1
+Gemini 2.5 Pro
+Claude 3.7 Sonnet
+DeepSeek R1
+
+8
+15
+60
+20
+25
+
+4
+2
+3
+2
+12
+
+0.69
+0.57
+0.24
+0.50
+0.29
+
+0.82
+0.91
+0.86
+0.91
+0.45
+
+39
+36
+73
+31
+71
+
+0
+1
+0
+0
+4
+
+0.36
+0.69
+0.23
+0.42
+0.18
+
+1.0
+0.95
+1.0
+1.0
+0.82
+
+5.4
+
+RQ2: Component Contribution
+
+To address RQ2, we conduct an incremental analysis. This study
+evaluates the contribution of the Security Impact Assessor (SecIA),
+the subsequent Constraint Assessor (ConA), and the specialized
+Structured Analysis Guidance (SAG) design used within ConA, by
+comparing performance across progressively enhanced configurations of BugLens.
+We assess the performance under the following configurations:
+• Baseline: This configuration employs the simple prompt design
+(§3.1.2) without the SecIA or ConA components. It establishes the
+baseline performance relying primarily on the LLM’s inherent
+capabilities with minimal guidance. The baseline design provides
+a starting point for comparison.
+• + SecIA: Adds the SecIA component to the Baseline. Purpose:
+Comparing this to the Baseline isolates the contribution of the
+SecIA stage. Detailed metrics for SecIA’s filtering rate and soundness are in Table 4.
+• + SecIA + ConA (w/o SAG): Adds the ConA component to the
+"+ SecIA" configuration, utilizing a simpler prompt design for
+constraint checking (i.e., without SAG). Comparing this to “+
+SecIA” isolates the contribution of adding the constraint assesses
+step itself.
+• Full Design (+ SecIA + ConA + SAG): This configuration enhances the ConA component from the previous step by incorporating the specialized SAG design. This represents the complete
+BugLens system. Comparing this to previous configurations emphasize the contribution of the SAG.
+10
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+For this component analysis (RQ2) and the subsequent model versatility analysis (RQ3), we focus our evaluation on a dataset derived
+from Linux kernel analysis, specifically targeting the sound module.
+This module was selected because the original Suture study identified it as containing a high density of true positive vulnerabilities
+(22 out of 24 known bugs), providing a rich testbed for assessing
+bug detection capabilities. The dataset consists of 120 cases, with
+22 known bugs (positives) and 98 non-bug cases (negatives).
+We evaluate the performance of these components for diverse
+LLMs, including OpenAI’s o3-mini, o1, GPT-4.1, Gemini 2.5 Pro,
+Claude 3.7 Sonnet, and DeepSeek R1. The overall performance
+results for these configurations are summarized in Table 3, while
+Table 4 provides the detailed breakdown specifically for the SecIA
+component’s effectiveness and filtering metrics.
+
+to a substantial reduction in FNs across all tested models. Consequently, the overall F1 score sees a marked improvement with
+SAG (e.g., improving from 0.67 to 0.94 for o3-mini and 0.34 to 0.54
+for Claude). This indicates that SAG successfully guides the LLM
+within ConA to overcome the previously observed overconfidence,
+achieving a better balance between FP reduction and FN mitigation.
+Takeaway. The design components of BugLens enables effective LLM bug analysis by significantly reducing both FP and FN
+compared to baseline prompting.
+
+5.5
+
+RQ3: Model Versatility
+
+The results shown in Table 3 affirm that BugLens is a general LLMbased technique applicable across different models, consistently
+improving upon baseline performance. However, the degree of
+success highlights variations in how different LLMs interact with
+complex instructions and structured reasoning processes.
+As noted in RQ2, the baseline performance offers a glimpse into
+the models’ raw capabilities, somewhat correlating with general
+LLM benchmarks where Gemini 2.5 Pro and Claude 3.7 Sonnet are
+often considered leaders [1]. However, this raw capability did not
+directly translate to superior performance within our structured
+task without significant guidance.
+When employing the ‘Full Design’ of BugLens, we observed
+distinct differences in instruction-following adherence. The OpenAI models, o1, GPT-4.1 (F1=0.81), and particularly our core model
+o3-mini (F1=0.94), demonstrated excellent alignment with the workflow’s intent.
+Conversely, while the ‘Full Design’ significantly improved the
+F1 scores for Gemini 2.5 Pro (0.57) and Claude 3.7 Sonnet (0.54)
+compared to their baseline or ‘w/o sag’ results by drastically cutting down FPs, they still struggled with relatively high False Negatives (FN=12 and FN=13, respectively). This suggests that even
+with the SAG, these powerful models may face challenges in precisely balancing the various analytical steps or interpreting the
+nuanced instructions within our workflow, possibly still exhibiting
+a degree of the previously mentioned over-confidence (for “sanity
+check”) that SAG could not fully overcome in their case. DeepSeek
+R1 (F1=0.77) showed a strong, balanced improvement, landing between the OpenAI models and the Gemini/Claude in terms of final
+performance with the full design. This demonstrates the potential
+of the BugLens using in open-sourced models.
+In summary, while our approach is broadly applicable, its optimal performance depends on the LLM’s ability to robustly follow
+complex, multi-step instructions, with models like OpenAI’s o3mini currently showing the strongest capability in this specific
+structured bug analysis task.
+
+5.4.1 Baseline. Our experimental results clearly demonstrate the
+significant contribution of our proposed multi-phase workflow and
+its components compared to a baseline approach. As shown in
+Table 3, despite some models like Claude 3.7 Sonnet (FN=1) and
+GPT-4.1 (FN=3) showed low False Negatives, potentially reflecting their raw analytical power, this came at the cost of high False
+Positives (FP=51 and FP=23, respectively), rendering this simple
+design ineffective for practical use. The F1 scores for the baseline were generally low across models. This direct prompting approach demonstrated worse performance when compared to other
+BugLens configurations.
+5.4.2 Security Impact Assessor (SecIA). As Table 4 shows, our Arbitrary Control Hypothesis (AC-Hypo) enhances recall across all
+models. Without AC-Hypo, the models exhibit noticeable False Negatives, ranging from 2 to 12 FN cases across tested models. After
+applying AC-Hypo, the FN rate decreases to zero for all models
+except DeepSeek R1 and GPT-4.1, which maintains a low FN rate
+(4 and 1, respectively), achieving a high recall of 0.82 and 0.95.
+Meanwhile, SecIA demonstrates strong effectiveness as a security
+vulnerability filter. Taking OpenAI’s o3-mini as an example, among
+a total of 98 negative cases, SecIA successfully filters out 60 cases
+(TN). This indicates that SecIA not only has a high recall rate, but
+it is also effective, substantially improving analysis efficiency.
+5.4.3 Constraint Assessor (ConA) without Structured Analysis Guidance (SAG). While this multi-phase workflow (i.e., SecIA + ConA)
+significantly reduces the high volume of FPs seen in the Baseline;
+for instance, Claude 3.7 Sonnet’s FPs dropped from 51 to 2, and
+Gemini 1.5 Pro’s from 24 to 4. It also leads to a significant increase in
+False Negatives (FNs) for Gemini 2.5 Pro (FN=14), Claude 3.7 Sonnet
+and DeepSeek R1 (FN=17), and OpenAI o1 (FN=10) in the ‘w/o SAG’.
+This supports our hypothesis (§3.1.2) that providing constraints,
+while helpful for pruning obvious non-bugs, can encourage LLMs
+to become overly confident. Once patterns suggesting data validity
+are identified, the LLM may default to classifying the issue as “not
+a bug,” reflecting a potential statistical bias towards common safe
+patterns rather than performing nuanced reasoning about subtle
+flaws or bypass conditions.
+
+Takeaway. BugLens shows broad applicability and yields
+promising results across diverse LLMs, including the open-source
+DeepSeek R1. OpenAI’s o3-mini currently gets the best result.
+
+5.6
+
+5.4.4 Structured Analysis Guidance (SAG). Comparing the Full Design (using SAG within ConA) to the w/o SAG configuration in
+Table 3 demonstrates SAG’s effectiveness. Introducing SAG leads
+
+Case Study: Data Structure Traversal
+
+Linux kernel code often uses pointers to traverse data structures.
+For example, the following code walks through a linked list list
+using a marco list_for_each_entry:
+11
+
+arXiv Preprint, Apr 2025, Earth
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+static analysis tools and integrate them into BugLens. Compared
+to heavy static analysis tools such as suture, an imprecise static
+analysis could be much easier to implement and maintain.
+
+struct snd_kcontrol *snd_ctl_find_id(struct snd_card *card,
+struct snd_ctl_elem_id *id )
+{
+struct snd_kcontrol *kctl;
+...
+if (id->numid != 0)
+return snd_ctl_find_numid(card, id->numid);
+list_for_each_entry(kctl, &card->controls, list) {
+...
+if (kctl->id.index > id->index )
+continue;
+if (kctl->id.index + kctl->count <= id->index )
+continue;
+return kctl;
+}
+return NULL;
+}
+
+7
+
+In this code, the loop goes through each element in the list and
+checks if any of them match the input id, which comes from the
+user. This kind of loop is hard for static analysis tools to understand
+unless they are specially designed to handle linked lists. These tools
+might wrongly report a warning, saying that user input affects
+when the loop ends. But in reality, the loop always stops at the end
+of the list, not because of the user input.
+The user input only decides which element gets picked, not how
+long the loop runs. Our method, BugLens, avoids this false warning
+by using the LLM’s deeper understanding of how data structures
+like linked lists work.
+5.6.1 A Bypassable Condition. There’s also a tricky part in this
+code. Before the list_for_each_entry loop even runs, there is a
+condition that checks if the id->numid is not zero. If it is not zero,
+the function will return the result of snd_ctl_find_numid(card,
+id->numid).
+This means the checks inside the loop for id->index might
+not happen at all. So even the loop contains conditions seem to
+validate id->index, those checks is not always are only performed
+if id->numid is zero. Otherwise, the function skip the loop entierly.
+This cases directly causes false negatives in BugLens, especially
+without the SAG mechanism. Limited by space, we describe this
+case in detail in the appendix §A.1.
+
+6
+
+Related work
+
+LLMs for bug detection. LLMs have shown promise in bug detection tasks, leveraging their ability to understand code semantics and context. Recent approaches like LLM4SA [45], LLift [26],
+and LLMSAN [43] combine static analysis with LLMs to refine
+results or enable end-to-end bug detection. BugLens takes a different approach by leveraging LLMs to reason about complex path
+constraints and semantic conditions, addressing scenarios where
+traditional symbolic methods struggle.
+LLMs for program analysis. LLMs have been widely applied
+to program analysis tasks, including static semantics analysis [17,
+42], indirect call resolution [10], and various inference tasks in
+program verification and synthesis [5, 11, 24, 29, 33, 36]. Similarly,
+BugLens leverages LLMs to reason about security impacts, utilizing
+their contextual understanding of code semantics to enhance the
+precision of program analysis results.
+Reasoning for LLMs. Despite their success on many tasks, the
+ability of LLMs to reason about code semantics and behaviors remains an active area of research [12, 28, 34, 49]. Recent studies
+have shown that LLMs are still far from performing reliable code
+reasoning, and their predictions are thus fragile and susceptible to
+superficial changes in input [19, 37, 40]. This fragility is often attributed to the learned models taking “shortcuts” based on superficial
+patterns in training data rather than robust, generalizable reasoning
+strategies [4, 14, 32, 46, 48]. BugLens mitigates this problem with
+a similar spirit to existing works on boosting the LLMs’ reasoning
+by constraining their reasoning space with structural and symbolic
+procedures [8, 9, 25, 27, 47].
+
+8
+
+Conclusion
+
+This paper introduces BugLens, an innovative post-refinement
+framework that integrates Large Language Models (LLMs) with
+static analysis. By employing Security Impact Assessor (SecIA), Constraint Assessor (ConA), and Structured Analysis Guidance (SAG) to
+guide LLMs through the reasoning process, BugLens significantly
+enhances the precision of initial static analysis findings without
+sacrificing scalability. Our evaluation demonstrates that BugLens
+dramatically reduces false positives in Linux kernel Analysis, minimizes manual inspection effort, and uncovers previously ignored
+vulnerabilities, highlighting the promise of guided LLMs in making
+automated bug detection more practical and effective.
+
+Limitation & Discussion
+
+Data Bias. The potential data bias introduced by Suture and
+CodeQL-SOD could threaten the internal validity. Despite the
+design of BugLens is completely decoupled from them, we
+only make tests on top of them might introduce bias into our
+experiments. BugLens may perform differently on other static
+analysis tools.
+Towards More Sound Analysis. The soundness of current implementation could be improved through two directions: (1) Adding
+symbolic verification [3, 5] to validate the LLM’s reasoning and
+refine outputs based on formal methods (2) Implementing a hybrid
+architecture where the LLM performs initial code slicing while symbolic execution handles constraint analysis, combining the LLM’s
+contextual understanding with provably sound formal reasoning.
+Intergation with More Static Analysis Tools. The CodeQL-SOD
+is an interesting static analysis tool that is based on the lightweight
+static analysis framework, CodeQL. Considering that BugLens can
+effectively improve the precision of existing static analysis tools,
+we could implement more corsare-grained (with low precision)
+
+References
+
+[1] Vellum AI. LLM Leaderboard. https://www.vellum.ai/llm-leaderboard, 2025.
+Accessed: 2025-04-15.
+[2] Kevin Backhouse. Stack buffer overflow in Qualcomm MSM 4.4 - Finding bugs
+with CodeQL, January 2018.
+[3] Sahil Bhatia, Jie Qiu, Niranjan Hasabnis, Sanjit A Seshia, and Alvin Cheung.
+Verified Code Transpilation with LLMs. 38th Conference on Neural Information
+Processing Systems (NeurIPS 2024), 2024.
+[4] Pavol Bielik and Martin Vechev. Adversarial robustness for code. In International
+Conference on Machine Learning, pages 896–907. PMLR, 2020.
+[5] Yufan Cai, Zhe Hou, David Sanan, Xiaokun Luan, Yun Lin, Jun Sun, and Jin Song
+Dong. Automated Program Refinement: Guide and Verify Code Large Language
+Model with Refinement Calculus. Proc. ACM Program. Lang., 9(POPL):69:2057–
+69:2089, January 2025.
+
+12
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+[6] Patrick J. Chapman, Cindy Rubio-González, and Aditya V. Thakur. Interleaving
+static analysis and LLM prompting with applications to error specification inference. International Journal on Software Tools for Technology Transfer, February
+2025.
+[7] Junkai Chen, Zhiyuan Pan, Xing Hu, Zhenhao Li, Ge Li, and Xin Xia. Reasoning
+runtime behavior of a program with llm: How far are we? In Proceedings of the
+IEEE/ACM 47th International Conference on Software Engineering, 2025.
+[8] Wenhu Chen, Xueguang Ma, Xinyi Wang, and William W Cohen. Program of
+thoughts prompting: Disentangling computation from reasoning for numerical
+reasoning tasks. arXiv preprint arXiv:2211.12588, 2022.
+[9] Yongchao Chen, Harsh Jhamtani, Srinagesh Sharma, Chuchu Fan, and Chi Wang.
+Steering large language models between code execution and textual reasoning.
+arXiv preprint arXiv:2410.03524, 2024.
+[10] Baijun Cheng, Cen Zhang, Kailong Wang, Ling Shi, Yang Liu, Haoyu Wang, Yao
+Guo, Ding Li, and Xiangqun Chen. Semantic-Enhanced Indirect Call Analysis
+with Large Language Models. In Proceedings of the 39th IEEE/ACM International
+Conference on Automated Software Engineering, pages 430–442, Sacramento CA
+USA, October 2024. ACM.
+[11] Yiu Wai Chow, Luca Di Grazia, and Michael Pradel. PyTy: Repairing Static Type
+Errors in Python. In Proceedings of the IEEE/ACM 46th International Conference
+on Software Engineering, ICSE ’24, pages 1–13, New York, NY, USA, April 2024.
+Association for Computing Machinery.
+[12] Yangruibo Ding, Jinjun Peng, Marcus J Min, Gail Kaiser, Junfeng Yang, and
+Baishakhi Ray. Semcoder: Training code language models with comprehensive
+semantics. arXiv preprint arXiv:2406.01006, 2024.
+[13] Chongzhou Fang, Ning Miao, Shaurya Srivastav, Jialin Liu, Najmeh Nazari, and
+Houman Homayoun. Large Language Models for Code Analysis: Do LLMs Really
+Do Their Job? In 33rd USENIX Security Symposium (USENIX Security 24). USENIX
+Association, August 2024.
+[14] Fengjuan Gao, Yu Wang, and Ke Wang. Discrete adversarial attack to models of
+code. Proceedings of the ACM on Programming Languages, 7(PLDI):172–195, 2023.
+[15] GitHub. Codeql. https://codeql.github.com, 2025.
+[16] Anjana Gosain and Ganga Sharma. Static Analysis: A Survey of Techniques and
+Tools. In Durbadal Mandal, Rajib Kar, Swagatam Das, and Bijaya Ketan Panigrahi,
+editors, Intelligent Computing and Applications, Advances in Intelligent Systems
+and Computing, pages 581–591, New Delhi, 2015. Springer India.
+[17] Jinyao Guo, Chengpeng Wang, Xiangzhe Xu, Zian Su, and Xiangyu Zhang. Repoaudit: An autonomous llm-agent for repository-level code auditing. CoRR,
+abs/2501.18160, 2025.
+[18] Haojie He, Xingwei Lin, Ziang Weng, Ruijie Zhao, Shuitao Gan, Libo Chen,
+Yuede Ji, Jiashui Wang, and Zhi Xue. Code is not Natural Language: Unlock the
+Power of Semantics-Oriented Graph Representation for Binary Code Similarity
+Detection. In 33rd USENIX Security Symposium (USENIX Security 24), pages
+1759–1776, Philadelphia, PA, August 2024. USENIX Association.
+[19] Andreas Hochlehnert, Hardik Bhatnagar, Vishaal Udandarao, Samuel Albanie,
+Ameya Prabhu, and Matthias Bethge. A sober look at progress in language model
+reasoning: Pitfalls and paths to reproducibility. arXiv preprint arXiv:2504.07086,
+2025.
+[20] Gabor Horvath, Reka Kovacs, and Zoltan Porkolab. Scaling Symbolic Execution
+to Large Software Systems, August 2024. arXiv:2408.01909 [cs].
+[21] Subbarao Kambhampati. Can large language models reason and plan? Annals of
+the New York Academy of Sciences, 1534(1):15–18, March 2024.
+[22] Avishree Khare, Saikat Dutta, Ziyang Li, Alaia Solko-Breslin, Rajeev Alur, and
+Mayur Naik. Understanding the Effectiveness of Large Language Models in
+Detecting Security Vulnerabilities, October 2024. arXiv:2311.16169 [cs].
+[23] Ruben Kopathy. ruben2020/codequery, March 2025.
+[24] Thanh Le-Cong, Bach Le, and Toby Murray. Can LLMs Reason About Program Semantics? A Comprehensive Evaluation of LLMs on Formal Specification
+Inference, March 2025. arXiv:2503.04779 [cs].
+[25] Chengshu Li, Jacky Liang, Andy Zeng, Xinyun Chen, Karol Hausman, Dorsa
+Sadigh, Sergey Levine, Li Fei-Fei, Fei Xia, and Brian Ichter. Chain of code:
+Reasoning with a language model-augmented code emulator. arXiv preprint
+arXiv:2312.04474, 2023.
+[26] Haonan Li, Yu Hao, Yizhuo Zhai, and Zhiyun Qian. Enhancing static analysis
+for practical bug detection: An llm-integrated approach. Proceedings of the ACM
+on Programming Languages (PACMPL), Volume 8, Issue OOPSLA1, 8(OOPSLA1),
+2024.
+[27] Jia Li, Ge Li, Yongmin Li, and Zhi Jin. Structured chain-of-thought prompting for
+code generation. ACM Transactions on Software Engineering and Methodology,
+34(2):1–23, 2025.
+[28] Junlong Li, Daya Guo, Dejian Yang, Runxin Xu, Yu Wu, and Junxian He. Codei/o:
+Condensing reasoning patterns via code input-output prediction. arXiv preprint
+arXiv:2502.07316, 2025.
+[29] Ziyang Li, Saikat Dutta, and Mayur Naik. IRIS: LLM-Assisted Static Analysis for
+Detecting Security Vulnerabilities. In The Thirteenth International Conference on
+Learning Representations (ICLR 2025), 2025.
+[30] Jinghua Liu, Yi Yang, Kai Chen, and Miaoqian Lin. Generating API Parameter
+Security Rules with LLM for API Misuse Detection. In Proceedings 2025 Network
+
+and Distributed System Security Symposium, San Diego, CA, USA, 2025. Internet
+Society.
+[31] Aravind Machiry, Chad Spensky, Jake Corina, Nick Stephens, Christopher
+Kruegel, and Giovanni Vigna. {DR}. {CHECKER}: A Soundy Analysis for Linux
+Kernel Drivers. In 26th USENIX Security Symposium (USENIX Security 17), pages
+1007–1024, 2017.
+[32] R. Thomas McCoy, Shunyu Yao, Dan Friedman, Mathew D. Hardy, and Thomas L.
+Griffiths. Embers of autoregression show how large language models are shaped
+by the problem they are trained to solve. Proceedings of the National Academy of
+Sciences, 121(41):e2322420121, 2024.
+[33] Md Rakib Hossain Misu, Cristina V. Lopes, Iris Ma, and James Noble. Towards
+ai-assisted synthesis of verified dafny methods. Proc. ACM Softw. Eng., 1(FSE),
+July 2024.
+[34] Ansong Ni, Miltiadis Allamanis, Arman Cohan, Yinlin Deng, Kensen Shi, Charles
+Sutton, and Pengcheng Yin. Next: Teaching large language models to reason
+about code execution. arXiv preprint arXiv:2404.14662, 2024.
+[35] Jihyeok Park, Hongki Lee, and Sukyoung Ryu. A survey of parametric static
+analysis. ACM Comput. Surv., 54(7):149:1–149:37, 2022.
+[36] Kexin Pei, David Bieber, Kensen Shi, Charles Sutton, and Pengcheng Yin. Can
+Large Language Models Reason about Program Invariants? In Proceedings of the
+40th International Conference on Machine Learning, July 2023.
+[37] Kexin Pei, Weichen Li, Qirui Jin, Shuyang Liu, Scott Geng, Lorenzo Cavallaro,
+Junfeng Yang, and Suman Jana. Exploiting code symmetries for learning program
+semantics. arXiv preprint arXiv:2308.03312, 2023.
+[38] Akshara Prabhakar, Thomas L. Griffiths, and R. Thomas McCoy. Deciphering the
+Factors Influencing the Efficacy of Chain-of-Thought: Probability, Memorization,
+and Noisy Reasoning, October 2024. arXiv:2407.01687 [cs].
+[39] Xingzhi Qian, Xinran Zheng, Yiling He, Shuo Yang, and Lorenzo Cavallaro.
+LAMD: Context-driven Android Malware Detection and Classification with
+LLMs. arXiv preprint arXiv:2502.13055, 2025.
+[40] Benjamin Steenhoek, Md Mahbubur Rahman, Monoshi Kumar Roy, Mirza Sanjida
+Alam, Hengbo Tong, Swarna Das, Earl T. Barr, and Wei Le. To Err is Machine: Vulnerability Detection Challenges LLM Reasoning, January 2025. arXiv:2403.17218
+[cs].
+[41] Bogdan Alexandru Stoica, Utsav Sethi, Yiming Su, Cyrus Zhou, Shan Lu, Jonathan
+Mace, Madanlal Musuvathi, and Suman Nath. If At First You Don’t Succeed,
+Try, Try, Again...? Insights and LLM-informed Tooling for Detecting Retry Bugs
+in Software Systems. In Proceedings of the ACM SIGOPS 30th Symposium on
+Operating Systems Principles, pages 63–78, Austin TX USA, November 2024.
+ACM.
+[42] Chengpeng Wang, Wuqi Zhang, Zian Su, Xiangzhe Xu, Xiaoheng Xie, and Xiangyu Zhang. LLMDFA: analyzing dataflow in code with large language models.
+In Amir Globersons, Lester Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet,
+Jakub M. Tomczak, and Cheng Zhang, editors, Advances in Neural Information
+Processing Systems 38: Annual Conference on Neural Information Processing Systems
+2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 - 15, 2024, 2024.
+[43] Chengpeng Wang, Wuqi Zhang, Zian Su, Xiangzhe Xu, and Xiangyu Zhang.
+Sanitizing large language models in bug detection with data-flow. In Yaser AlOnaizan, Mohit Bansal, and Yun-Nung Chen, editors, Findings of the Association
+for Computational Linguistics: EMNLP 2024, Miami, Florida, USA, November 12-16,
+2024, pages 3790–3805. Association for Computational Linguistics, 2024.
+[44] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei
+Xia, Ed Chi, Quoc Le, and Denny Zhou. Chain-of-Thought Prompting Elicits
+Reasoning in Large Language Models, January 2023. arXiv:2201.11903 [cs].
+[45] Cheng Wen, Yuandao Cai, Bin Zhang, Jie Su, Zhiwu Xu, Dugang Liu, Shengchao
+Qin, Zhong Ming, and Tian Cong. Automatically Inspecting Thousands of Static
+Bug Warnings with Large Language Model: How Far Are We? ACM Trans. Knowl.
+Discov. Data, 18(7):168:1–168:34, June 2024.
+[46] Zhou Yang, Jieke Shi, Junda He, and David Lo. Natural attack for pre-trained
+models of code. In Proceedings of the 44th International Conference on Software
+Engineering, pages 1482–1493, 2022.
+[47] Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Tom Griffiths, Yuan Cao, and
+Karthik Narasimhan. Tree of thoughts: Deliberate problem solving with large
+language models. Advances in neural information processing systems, 36:11809–
+11822, 2023.
+[48] Noam Yefet, Uri Alon, and Eran Yahav. Adversarial examples for models of code.
+Proceedings of the ACM on Programming Languages, 4(OOPSLA):1–30, 2020.
+[49] Eric Zelikman, Yuhuai Wu, Jesse Mu, and Noah Goodman. Star: Bootstrapping
+reasoning with reasoning. Advances in Neural Information Processing Systems,
+35:15476–15488, 2022.
+[50] Yizhuo Zhai, Yu Hao, Hang Zhang, Daimeng Wang, Chengyu Song, Zhiyun Qian,
+Mohsen Lesani, Srikanth V. Krishnamurthy, and Paul Yu. Ubitect: A precise
+and scalable method to detect use-before-initialization bugs in linux kernel. In
+Proceedings of the 28th ACM Joint Meeting on European Software Engineering
+Conference and Symposium on the Foundations of Software Engineering, ESEC/FSE
+2020, 2020.
+[51] Hang Zhang, Weiteng Chen, Yu Hao, Guoren Li, Yizhuo Zhai, Xiaochen Zou,
+and Zhiyun Qian. Statically Discovering High-Order Taint Style Vulnerabilities
+13
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+in OS Kernels. In Proceedings of the 2021 ACM SIGSAC Conference on Computer
+and Communications Security, pages 811–824, Virtual Event Republic of Korea,
+November 2021. ACM.
+
+14
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+A Case Study of BugLens
+A.1 Data Structure Traversals & Bypass
+Conditions
+
+Here’s the most triky part, suppose we track the taint
+data control->id.index and by looking at the definition of
+snd_ctl_find_id, we can see that:
+if (kctl->id.index > id->index)
+continue;
+if (kctl->id.index + kctl->count <= id->index)
+continue;
+return kctl;
+
+In §5.6, we have shown a case of data structure traversal:
+1
+2
+3
+4
+
+struct snd_kcontrol *snd_ctl_find_id(struct snd_card *card,
+struct snd_ctl_elem_id *id )
+{
+struct snd_kcontrol *kctl;
+
+Naively, LLM may think these two conditions ensures
+the control->id.index is within a strict range, between
+kctl->id.index and kctl->id.index
++
+kctl->count
+Considering that these kctl objects are predefined and maintained
+in the kernel, we might think our tainted input is used with an
+effective and restricted range.
+A Closer Look: However, this is not the case. The key here is
+before the list_for_each_entry loop:
+
+5
+
+if (snd_BUG_ON(!card || !id))
+return NULL;
+if (id->numid != 0)
+return snd_ctl_find_numid(card, id->numid);
+list_for_each_entry(kctl, &card->controls, list) {
+if (kctl->id.iface != id->iface)
+continue;
+if (kctl->id.device != id->device)
+continue;
+if (kctl->id.subdevice != id->subdevice)
+continue;
+if (strncmp(kctl->id.name, id->name, sizeof(kctl->id.name)))
+continue;
+if (kctl->id.index > id->index)
+continue;
+if (kctl->id.index + kctl->count <= id->index)
+continue;
+return kctl;
+}
+return NULL;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+if (id->numid != 0)
+return snd_ctl_find_numid(card, id->numid);
+list_for_each_entry(kctl, &card->controls, list) {
+
+Before the loop, the function checks if id->numid is not zero,
+and if so, it calls snd_ctl_find_numid to find the corresponding
+kctl object, and returns it directly. This means that the
+list_for_each_entry loop, and inside checks can be bypassed if
+the id->numid is not zero.
+The function snd_ctl_find_numid is defined as:
+
+}
+
+We now consider a caller of our example snd_ctl_find_id. The
+function snd_ctl_elem_write takes a control parameter, which
+is also tainted user input. It then calls snd_ctl_find_id to find
+the corresponding kctl object. The put function of kctl is then
+called with the tainted control parameter.
+1
+2
+3
+4
+5
+6
+7
+8
+
+struct snd_kcontrol *snd_ctl_find_numid(struct snd_card *card, unsigned int
+,→
+numid)
+{
+struct snd_kcontrol *kctl;
+if (snd_BUG_ON(!card || !numid))
+return NULL;
+list_for_each_entry(kctl, &card->controls, list) {
+if (kctl->id.numid <= numid &&
+kctl->id.numid + kctl->count > numid)
+return kctl;
+}
+return NULL;
+
+static int snd_ctl_elem_write(struct snd_card *card,
+struct snd_ctl_file *file,
+struct snd_ctl_elem_value *control )
+{
+struct snd_kcontrol *kctl;
+struct snd_kcontrol_volatile *vd;
+unsigned int index_offset;
+int result;
+
+}
+
+9
+
+kctl = snd_ctl_find_id(card, & control->id );
+if (kctl == NULL)
+return -ENOENT;
+...
+result = kctl->put(kctl, *control );
+...
+
+10
+11
+12
+13
+14
+15
+
+This function also traverses the card->controls list, but it uses
+kctl->id.numid as the key to find the corresponding kctl object.
+The numid is a unique identifier for each kctl object, and it is not
+directly related to the control->id.index field.
+Finally, the current effect summarization for the
+snd_ctl_find_id function should be like (not shown
+completely):
+
+16
+
+return 0;
+
+17
+18
+
+}
+
+A.1.1 Step 2: Constraint Collection. Suppose the put function is
+a sink or critical operations that could lead to a vulnerability (and
+there are indeed many such cases, for different instances of kctl).
+When Constraint Assessor (ConA) analyzes this code, its second step is to collect the data constraints of for the tainted input
+control (actually, the tainted input is control->id, and specific
+field depends on how the exactly put uses).
+Natrually, it will collect the following constraints:
+snd_ctl_find_id(...) cannot return NULL. and the kctl object
+must be valid.
+
+(1) Precondition: control->id.numid != 0,
+Postcondition: kctl != NULL && kctl->id.numid <=
+control->id.numid < kctl->id.numid+kctl->count
+(2) Precondition: control->id.numid == 0
+Postcondition: kctl != NULL && kctl->id.index <=
+control->id.index < kctl->id.index+kctl->count
+The overlook of this bypass is the main reason of the false negatives for models.
+
+B
+
+A.1.2 Step 3: Constraint Effect Summarization. After collecting the
+constraints, the next step is to summarize the effect of the constraints, so we need to go back to the snd_ctl_find_id function
+and analyze the constraints of control->id.
+
+Outline of LLM Prompt
+
+We provide the outline of the LLM prompt for each task in BugLens.
+For simplified, we remove all examples (that used in few-shot incontext learning).
+15
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+The args are the arguments for each case running, and the
+callback is the callback function for each prompt for the agentic
+design PKA.
+
+B.1
+
+Summarize our discussion , and respond with a < bug_eval > tag
+indicating whether the tainted variable can lead to
+vulnerabilities :
+currently we only consider (1) infinite / very - large loop , (2) out
+-of - bound access / buffer overflow / arbitrary memory access ;
+for other types of bugs , you can say " normal code " or " not_a_bug
+"
+
+Prompt for Inferring Variable Names
+
+I have a static analysis tool that tracks tainted user input in
+Linux kernel drivers .
+Since the analysis uses LLVM IR , I need help identifying the
+corresponding source - level variables .
+For each case :
+
+< bug_eval >
+< tainted_var > tainted_var </ tainted_var >
+< vulns >
+<vuln >
+<type > out_of_bound_access </ type >
+<desc > Brief description of how the vulnerability
+occurs </ desc >
+</ vuln >
+</ vulns >
+</ bug_eval >
+
+1. Tainted values are either local variables loaded from globals
+/ parameters , or direct function parameters
+2. Tainted values are always numeric
+3. Be aware of name redundancy , especially in global variables
+and their fields
+4. Identify specific struct field names when applicable
+5. For propagation , identify the first local variable receiving
+the taint
+
+For no vulnerability : < bug_eval > not_a_bug </ bug_eval >
+For potential vulnerability : < bug_eval > potential_bug </ bug_eval >
+If uncertain : < bug_eval > uncertain </ bug_eval >
+
+Analyze line by line :
+========================================
+The bug detector is : {}
+source code :
+{}
+--------------------------------------Instructions :
+{}
+--------------------------------------line no ( in source code ): {}
+--------------------------------------args :
+- get_bug_detector
+- get_function_first_part
+- get_insts_from_ctx
+- get_source_line_set
+
+B.2
+
+B.3
+
+Prompt for ConA
+
+This part we provide the prompt for the Constraint Assessor (ConA)
+task. These prompts already contain the design of SAG. Additionally,
+we also provide a list of functionalities of the agent PKA inside
+prompts, represented as {AGENT PROMPTS HERE} .
+B.3.1 Step 1: Reachability Analysis. The following is the prompt
+for the step 1 of ConA task. (see §3.3.3 for details)
+Identify the sink ( the last line of the provided function
+context ) and determine its preconditions .
+Focus only on two types of preconditions :
+1. Direct checks ( dominate conditions ) - Conditions that
+directly control if the sink executes
+Example : `if ( flag ) { sink ( tainted_var ); }`
+2. Early returns / bypasses ( guard conditions ) - Conditions that
+cause early returns or jumps that bypass the sink
+Example : `if ( tainted_var > 100) return ; sink ( tainted_var );`
+Here , " tainted_var <= 100" is the precondition to reach the
+sink .
+Ignore conditions that don 't directly impact sink reachability .
+========================================
+
+Prompt for SecIA
+
+I have a static analysis tool for Linux kernel drivers that
+produces many false positives when detecting :
+1. Tainted Arithmetic Operations ( integer overflows )
+2. Tainted Loop Bound Conditions ( infinite loops , unexpected
+iterations )
+3. Tainted Pointer Dereferences ( arbitrary memory access )
+4. Buffer Overflow ( out -of - bounds access )
+5. Tainted length in copy_from_user ( especially stack overflow )
+Your Task :
+1. Analyze the provided code snippet flagged by our tool
+2. Assume :
+- Attackers cannot control the kernel
+- Tainted variables can be set to any value within their
+type range
+- All existing checks can be bypassed
+- Ignore any security checks in the code
+3. Determine if the code represents :
+- Potential Bug : If the tainted variable can cause infinite
+loops , very large loops , or memory bugs in the current
+context
+- Normal Code : If the tainted variable usage doesn ' t lead to
+security issues within our scope
+Provide a step -by - step explanation of your reasoning and
+classification .
+========================================
+tainted_varaible : {}
+bug detector : {}
+source code
+{}
+========================================
+
+{AGENT PROMPTS HERE }
+========================================
+sink variable
+{}
+sink context ( the full context of the function ):
+{}
+========================================
+Summarize in this format :
+``` xml
+< sink_precondi >
+< precondi >
+<type > dominate_condition </ type >
+< condition > flag </ condition >
+< dominated_sink > if ( flag ) sink ( tainted_var ) </ dominated_sink >
+</ precondi >
+< precondi >
+<type > guard_condition </ type >
+< condition > tainted_var <= 100 </ condition >
+< guard_bypass > if ( tainted_var > 100) return / goto
+invalid_label ; </ guard_bypass >
+</ precondi >
+</ sink_precondi >
+```
+Note : Multiple preconditions combine with " AND " logic .
+
+args :
+- get_tainted_value
+- get_bug_detector
+- get_function
+
+args :
+
+16
+
+The Hitchhiker’s Guide to Program Analysis, Part II: Deep Thoughts by LLMs
+
+arXiv Preprint, Apr 2025, Earth
+
+- get_tainted_value
+- get_function
+callback :
+- need_struct_def
+- need_global_var_def
+
+else if ( config == 2)
+assert (x > 0) ;
+}
+You must extract the following [ precondition ,
+pairs :
+1. Bypass Case
+Precondition : other_config == CHECK_SKIP
+Postcondition : x in (- inf , + inf )
+2. Config 1 Case
+Precondition : other_config != CHECK_SKIP &&
+Postcondition : x in (0 , 100)
+3. Config 2 Case
+Precondition : other_config != CHECK_SKIP &&
+Postcondition : x in (0 , + inf )
+4. Default Case
+Precondition : other_config != CHECK_SKIP &&
+config != 2
+Postcondition : x in (- inf , + inf )
+
+B.3.2 Step 2: Constraint Collection. The following is the step 2 of
+the prompt for the ConA task. (see §3.3.4 for details)
+Help find range constraints for the tainted variable across the
+call chain .
+========================================
+tainted_variable : {}
+current callchain : {}
+context of the sink :
+{}
+========================================
+Focus on finding all possible value range constraints for the
+tainted variable , without analyzing their effectiveness .
+Types of constraints to look for :
+1. Validation : conditions that reject invalid ranges (e.g., if (
+tainted_var < 0) return - EINVAL ;)
+2. Sanitization : corrections applied to the value (e.g.,
+tainted_var = min ( tainted_var , 100) ;)
+3. Type constraints : implicit limits from variable types (e.g.,
+uint8_t limits to [0 ,255])
+Important notes :
+- Validations are transferable through operations (e.g.,
+constraints on var = tainted_var + 1 apply to tainted_var )
+- Sanitizations are not transferable
+- Base your analysis only on the provided code , not prior
+knowledge
+- Track the variable across different names in different
+contexts
+=========================================
+
+postcondition ]
+
+config == 1
+
+config == 2
+
+config != 1 &&
+
+========================================
+{AGENT PROMPTS HERE}
+=======================================
+Finally , output your analysis as XML in the following format :
+``` xml
+< range_constraint >
+<type > validation </ type >
+< handler_func > check_tainted_value </ handler_func >
+< condition_pairs >
+<pair >
+< precondi > other_config == CHECK_SKIP </ precondi >
+< postcondi >x in (- inf , + inf ) </ postcondi >
+< context > if ( other_config == CHECK_SKIP ) return ; </ context
+>
+</ pair >
+...
+<pair >
+< precondi > other_config != CHECK_SKIP && config != 1 &&
+config != 2 </ precondi >
+< postcondi >x in (- inf , + inf ) </ postcondi >
+< context > induced by the other branches </ context >
+</ pair >
+</ condition_pairs >
+</ range_constraint >
+````
+callback :
+- need_func_def
+- need_struct_def
+- need_global_var_def
+- need_caller
+
+{AGENT PROMPTS HERE}
+=========================================
+Summarize your findings in this format :
+--------------------------------------< range_constraints >
+< constraint >
+<type > validation | sanitization | type_constraint </ type >
+< handler_func > function_name </ handler_func >
+< context > relevant_code_snippet </ context >
+</ constraint >
+</ range_constraints >
+--------------------------------------args :
+- get_tainted_value
+- get_call_chain
+- get_function_first_part
+callback :
+- need_func_def
+- need_caller
+- need_struct_def
+- need_global_var_def
+
+B.3.4 Step 4: Final Vulnerability Evaluation. The following is the
+prompt of the step 4 of the ConA task. (see §3.3.6 for details)
+Evaluate if this bug is eliminated , not exploitable , or still
+vulnerable .
+Extract concrete values for " size of " or " length of " in
+constraints and bug conditions .
+Analyze whether the bug condition can be satisfied considering
+all constraints :
+- Disregard constraints with postconditions that don ' t limit
+the tainted variable
+- Disregard constraints for unrelated sinks
+- For kernel - controlled conditions , determine reachability
+based on your knowledge
+- If a precondition contains user - controlled variables , assume
+users can bypass it
+A bug is " eliminated " only if :
+- The postcondition restricts the tainted variable to a safe
+range that makes the bug impossible
+- The precondition is always satisfied when the sink ' s
+precondition is true
+If the postcondition isn 't strong enough , assess exploitability
+assuming attackers can set any value .
+========================================
+
+B.3.3 Step 3: Constraint Effect Summarization. The following is
+the prompt of the step 3 of the ConA task. (see §3.3.5 for details)
+Act as a program verifier / symbolic execution engine to infer
+precondition and postcondition pairs for constraints in
+code . Use these simple rules :
+- The ** precondition ** is the path condition required to reach
+the constraint .
+- The ** postcondition ** is the effect on the tainted variable (
+often shown as its valid range ).
+Consider all branches and early return " bypass " cases . For
+instance , given this sample function :
+```c
+void check_tainted_value ( int config , int other_config , int x){
+if ( other_config == CHECK_SKIP )
+return ;
+if ( config == 1)
+assert (x > 0 && x < 100) ;
+
+{AGENT PROMPTS HERE}
+
+17
+
+arXiv Preprint, Apr 2025, Earth
+
+Haonan Li, Hang Zhang, Kexin Pei, and Zhiyun Qian
+
+========================================
+
+45
+46
+
+callback :
+- need_func_def
+- need_struct_def
+- need_global_var_def
+- need_caller
+
+47
+48
+49
+
+B.3.5 Schema-constrained summarization. The following is the
+prompt for summarization of the ConA task, which is used to
+extract the final result of the vulnerability evaluation within a
+<final_res>.
+Now Let 's summarize our discussion , and respond in a < final_res >
+tag with the following format :
+" still_a_bug ", " eliminated ", " likely_safe ", " likely_unsafe ", "
+not_exploitable " or " uncertain " within a < final_res > tag ,
+e.g., < final_res > still_a_bug </ final_res >
+
+B.4
+
+Prompt for PKA
+
+The following is the exact prompt that shown as AGENT PROMPTS
+HERE in the previous parts.
+1
+2
+
+========================================
+First of all , you don 't need to complete the task in your
+initial response . You can always ask for more information .
+
+3
+4
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+
+When you need additional details , use the following format . In
+this case , don ' t reach a conclusion immediately - instead ,
+request the information you need to perform a thorough
+analysis once you receive my response .
+--- request 1: ask for the function definition --You could ask me for the definition of the function . in this
+case , you could respond with the following :
+< requests >
+< request >
+<name > need_func_def </ name >
+<args >
+<arg > func_1 </ arg >
+<arg > func_2 </ arg >
+</ args >
+</ request >
+</ requests >
+--- request 2: ask for the struct definition --You could ask me for the definition of the structure . in this
+case , you could respond with the following :
+< requests >
+< request >
+<name > need_struct_def </ name >
+<args >
+<arg > struct_name_1 </ arg >
+<arg > struct_name_2 </ arg >
+</ args >
+</ request >
+</ requests >
+--- request 3: ask for the caller of the current function --You could ask me for the caller for the current function . ( Note :
+you can only request one caller at a time )
+in this case , you could respond with the following :
+< requests >
+< request >
+<name > need_caller </ name >
+<args >
+<arg > current_function_name </ arg >
+</ args >
+</ request >
+</ requests >
+--- request 4: ask for the definition of global variables --You could ask me for the definition of global variables . In this
+case , you could respond with the following :
+< requests >
+< request >
+<name > need_global_var_def </ name >
+<args >
+<arg > global_var_1 </ arg >
+
+18
+
+<arg > global_var_2 </ arg >
+</ args >
+</ request >
+</ requests >
+========================================
+
+

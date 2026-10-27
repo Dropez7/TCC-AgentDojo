@@ -33,8 +33,8 @@ def benchmark_suite(
     attack: str | None = None,
     defense: str | None = None,
     tool_delimiter: str = "tool",
+    system_message_name_name: str | None = None,
     system_message_name: str | None = None,
-    system_message: str | None = None,
     live: Live | None = None,
     tool_output_format: Literal["yaml", "json"] | None = None,
 ) -> SuiteResults:
@@ -56,8 +56,9 @@ def benchmark_suite(
             model_id=model_id,
             defense=defense,
             tool_delimiter=tool_delimiter,
+            system_message_name_name=system_message_name_name,
             system_message_name=system_message_name,
-            system_message=system_message,
+            system_message="",
             tool_output_format=tool_output_format,
         )
     )
@@ -152,7 +153,7 @@ def show_results(suite_name: str, results: SuiteResults, show_security_results: 
     "--system-message-name",
     type=str,
     default=None,
-    help="The name of the system message to use among the default ones in `data/system_messages.yaml`.",
+    help="The name of the system message to use among the default ones in `data/system_message_names.yaml`.",
 )
 @click.option(
     "--system-message",
@@ -219,8 +220,8 @@ def main(
     attack: str | None = None,
     defense: str | None = None,
     tool_delimiter: str = "tool",
+    system_message_name_name: str | None = None,
     system_message_name: str | None = None,
-    system_message: str | None = None,
     max_workers: int = 1,
     force_rerun: bool = False,
     modules_to_load: tuple[str, ...] = (),
@@ -252,8 +253,8 @@ def main(
                 attack=attack,
                 defense=defense,
                 tool_delimiter=tool_delimiter,
+                system_message_name_name=system_message_name_name,
                 system_message_name=system_message_name,
-                system_message=system_message,
                 force_rerun=force_rerun,
             )
         combined_results = SuiteResults(utility_results={}, security_results={}, injection_tasks_utility_results={})
@@ -288,8 +289,8 @@ def main(
             repeat(attack),
             repeat(defense),
             repeat(tool_delimiter),
+            repeat(system_message_name_name),
             repeat(system_message_name),
-            repeat(system_message),
             repeat(force_rerun),
         )
         results = p.starmap(benchmark_suite, arguments)

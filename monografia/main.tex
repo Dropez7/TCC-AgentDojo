@@ -1,0 +1,128 @@
+\documentclass{projetofinal-dcc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% P A C O T E S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[]{algorithm2e}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+
+\renewcommand{\algorithmcfname}{Algoritmo}
+\renewcommand{\listalgorithmcfname}{Lista de Algoritmos}
+
+% Configuração para listings
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  captionpos=b,
+  showstringspaces=false
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% I N I C I O  D O  D O C U M E N T O
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{black}{rgb}{0,0,0}
+\definecolor{blue}{rgb}{0,0,0.4}
+\definecolor{purple}{rgb}{0.8,0,0.3}
+\definecolor{orange}{rgb}{1,0.4,0}
+\definecolor{lightlightgray}{gray}{0.85}
+
+% Título do trabalho
+\title{Análise da Corrupção de Lógica Condicional em Agentes Baseados em LLM Sob Ataques de Indirect Prompt Injection}
+
+% Autor
+\author{Pedro Henrique Silva de Albuquerque}{\input{elementos-pretextuais/agradecimentos}}
+
+% Orientador
+\advisor[Prof.]{}{}
+
+% Co-orientador (descomente/ajuste se houver)
+%\coadvisor[Prof.]{Nome do co-orientador,~M.Sc.}{}{a}
+
+% Banca examinadora
+\banca[Prof.]{Nome do participante banca 1,~D.Sc.}{DCC~-~UFRRJ}
+\banca[Prof.]{Nome do participante banca 2,~Ph.D.}{DCC~-~UFRRJ}
+
+\location{Nova Iguaçu}{RJ}{Brasil}
+
+% Mês e ano de defesa
+\date{Setembro}{2026}
+\maketitle
+
+\startdocument
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A G R A D E C I M E N T O S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\makethankspage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% R E S U M O
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}{
+  \input{elementos-pretextuais/resumo}
+}
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A B S T R A C T
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{englishabstract}{
+  \input{elementos-pretextuais/abstract}
+}
+
+
+\end{englishabstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% L I S T A S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Figuras
+\makefigurespage
+
+% Tabelas
+\maketablespage
+
+% Algoritmos (descomente se houver)
+%\listofalgorithms
+
+% Abreviaturas
+\makeabrevpage{\input{elementos-pretextuais/abreviaturas}}
+
+% Símbolos
+\makesymbolspage{\input{elementos-pretextuais/simbolos}}
+
+% Sumário
+\maketocpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% C O N T E Ú D O
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\startcontent
+\input{elementos-textuais/introducao}
+\input{elementos-textuais/fundamentacao}
+\input{elementos-textuais/experimentos}
+\input{elementos-textuais/resultados}
+\input{elementos-textuais/conclusao}
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% B I B L I O G R A F I A
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makebibspage{elementos-postextuais/referencias}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A P E N D I C E
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\input{elementos-postextuais/apendice}
+
+\end{document}

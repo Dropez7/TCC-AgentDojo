@@ -1,0 +1,46 @@
+[
+  {
+    "Modelo": "deepseek-r1:8b",
+    "Vetor de Ataque": "Baseline (Sem Ataque)",
+    "N (Runs)": 1,
+    "Utilidade Média (%)": 0.0,
+    "Utilidade Std": 0.0,
+    "Utilidade CI-95 (±)": 0.0,
+    "ASR Médio (%)": 0.0,
+    "ASR Std": 0.0,
+    "ASR CI-95 (±)": 0.0
+  },
+  {
+    "Modelo": "deepseek-r1:8b",
+    "Vetor de Ataque": "important_instructions",
+    "N (Runs)": 1,
+    "Utilidade Média (%)": 0.0,
+    "Utilidade Std": 0.0,
+    "Utilidade CI-95 (±)": 0.0,
+    "ASR Médio (%)": 0.0,
+    "ASR Std": 0.0,
+    "ASR CI-95 (±)": 0.0
+  },
+  {
+    "Modelo": "mistral:latest",
+    "Vetor de Ataque": "Baseline (Sem Ataque)",
+    "N (Runs)": 1,
+    "Utilidade Média (%)": 2.5,
+    "Utilidade Std": 0.0,
+    "Utilidade CI-95 (±)": 0.0,
+    "ASR Médio (%)": 0.0,
+    "ASR Std": 0.0,
+    "ASR CI-95 (±)": 0.0
+  },
+  {
+    "Modelo": "mistral:latest",
+    "Vetor de Ataque": "important_instructions",
+    "N (Runs)": 1,
+    "Utilidade Média (%)": 0.0,
+    "Utilidade Std": 0.0,
+    "Utilidade CI-95 (±)": 0.0,
+    "ASR Médio (%)": 0.0,
+    "ASR Std": 0.0,
+    "ASR CI-95 (±)": 0.0
+  }
+]

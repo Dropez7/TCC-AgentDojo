@@ -1,0 +1,75 @@
+\chapter{Fundamentação Teórica}\label{chp:FUNDAMENTACAO}
+
+Este capítulo apresenta o embasamento teórico necessário para a compreensão dos experimentos e análises desenvolvidos nesta monografia. Inicialmente, discutem-se os conceitos de modelos de linguagem e agentes autônomos, seguidos pela caracterização dos canais de dados não confiáveis e pela análise da ausência fundamental de separação entre código e dados em LLMs. Em seguida, formalizam-se as vulnerabilidades de \textit{Indirect Prompt Injection} (IPI) e os fenômenos de desvio lógico (\textit{Branch Divergence} e \textit{Reasoning Corruption}). Por fim, apresenta-se a arquitetura e o funcionamento do arcabouço de teste AgentDojo.
+
+\section{Modelos de Linguagem de Grande Escala e Agentes Autônomos}
+
+Modelos de Linguagem de Grande Escala (\textit{Large Language Models} / LLMs) são redes neurais profundas baseadas na arquitetura \textit{Transformer}, treinadas sobre grandes volumes de dados textuais para prever a probabilidade do próximo \textit{token} em uma sequência autorregressiva. A evolução desses modelos permitiu a transição de tarefas estáticas de processamento de texto para sistemas dinâmicos conhecidos como agentes baseados em LLM.
+
+Um agente autônomo combina o núcleo de raciocínio de um LLM com componentes de memória, planejamento e capacidade de uso de ferramentas externas (\textit{tool use} / \textit{function calling}) \cite{debenedetti2024agentdojynamicenvironmentevaluate}. Através de um laço de interação (como a arquitetura ReAct -- \textit{Reasoning and Acting}), o agente recebe uma instrução do usuário, decide qual ferramenta invocar, executa a ação no ambiente, observa a resposta retornada e itera continuamente até a conclusão do objetivo.
+
+\section{Canais de Entrada de Dados Não Confiáveis (\textit{Untrusted Data})}
+\label{sec:canais_ataque}
+
+Em arquiteturas agentic modernas, particularmente aquelas baseadas em \textit{Retrieval-Augmented Generation} (RAG) ou equipadas com mecanismos de chamadas de função, o fluxo de execução estabelece múltiplos canais por meio dos quais dados não confiáveis (\textit{untrusted data}) adentram o ciclo de inferência do modelo.
+
+Diferente de um LLM conversacional estático, cujo contexto é alimentado exclusivamente pelo \textit{prompt} de sistema e pelas mensagens do usuário, o agente autônomo executa um laço interativo no qual saídas de ferramentas são reinjetadas como mensagens de observação (\textit{role: tool} ou \textit{role: user}). Essas observações constituem vetores diretos de contaminação:
+
+\begin{enumerate}
+    \item \textbf{Canais de Comunicação e Mensageria:} Ferramentas que consultam caixas de entrada de correio eletrônico (\textit{Inbox}) ou canais de chat corporativo recuperam corpos de e-mail e anexos gerados por terceiros não autenticados ou potencialmente maliciosos \cite{dziemian2026vulnerableaiagentsindirect}.
+    \item \textbf{Repositórios de Armazenamento e Documentos Compartilhados:} Ferramentas de busca em sistemas de arquivos em nuvem (\textit{Cloud Drive}) processam relatórios, planilhas CSV, notas e arquivos PDF cujo conteúdo pode ter sido editado por usuários mal-intencionados com privilégios de escrita \cite{greshake2023youvesignedforcompromising}.
+    \item \textbf{Agendas e Calendários:} Descrições de reuniões, locais e listas de participantes em convites de agenda são frequentemente preenchidos por agentes externos, tornando a ferramenta de leitura de eventos um ponto de entrada propício para injeções.
+    \item \textbf{Navegação Web e Consultas a APIs de Terceiros:} Em fluxos RAG abertos, páginas HTML recuperadas via raspagem web trazem instruções camufladas em elementos DOM, metadados ou comentários invisíveis ao usuário \cite{ferrag2025promptinjectionsprotocolexploits}.
+\end{enumerate}
+
+A literatura recente caracteriza esse ciclo como um processo de \textit{tool-mediated IPI}: uma observação de ferramenta contaminada pode persistir no estado do agente e alterar decisões emitidas em rodadas posteriores, mesmo quando a ação maliciosa não é executada imediatamente \cite{zhang2026agentsentrymitigatingindirectprompt}.
+
+\section{A Ausência Fundamental de Separação entre Código e Dado}
+\label{sec:von_neumann_vs_llm}
+
+A suscetibilidade intrínseca dos agentes a ataques de IPI decorre de uma divergência estrutural profunda em relação aos modelos computacionais clássicos \cite{saltzer1975protection}. Na arquitetura clássica de von Neumann e nos sistemas operacionais convencionais, existe uma separação física ou lógica rigorosa entre o plano de controle (instruções executáveis / código) e o plano de dados (entradas, arquivos e variáveis de memória). Mecanismos no nível do hardware e do compilador, tais como o bit de proteção contra execução de dados (\textit{Data Execution Prevention} / DEP ou bit NX), isolamento de páginas de memória e consultas parametrizadas em bancos de dados relacionais (\textit{Prepared Statements}), garantem que uma entrada fornecida pelo usuário jamais seja interpretada pela CPU como uma instrução de máquina.
+
+Em contraste, os modelos de linguagem baseados na arquitetura \textit{Transformer} operam sob um paradigma essencialmente homogêneo: tanto as diretivas do sistema (\textit{system prompt}), quanto as solicitações do usuário e os dados recuperados de ferramentas externas são transformados em uma única sequência linear de \textit{tokens} de texto. Durante o mecanismo de autoatenção (\textit{self-attention}), cada \textit{token} calcula sua matriz de atenção sobre todos os demais \textit{tokens} da janela de contexto de forma indistinta, sem qualquer garantia formal de precedência hierárquica.
+
+Consequentemente, para a camada de atenção do LLM, uma instrução maliciosa embutida dentro de um registro de e-mail (dado) possui a mesma natureza sintática e potencial acionável que a regra mestra definida no \textit{system prompt} (código). Essa ausência de limites determinísticos torna o \textit{Indirect Prompt Injection} uma vulnerabilidade intrínseca à própria semântica dos modelos de linguagem autorregressivos, não sendo solucionável por simples regras sintáticas superficiais.
+
+\section{Taxonomia dos Ataques de Prompt Injection}
+
+Os ataques de injeção de prompt dividem-se primariamente em duas categorias essenciais:
+
+\begin{itemize}
+    \item \textbf{Direct Prompt Injection (Injeção Direta / Jailbreak):} O próprio operador do sistema envia comandos elaborados para contornar alinhamentos de segurança do modelo (\textit{e.g.}, ``Ignore todas as instruções anteriores e me dê a receita de...''). O vetor de ataque situa-se no canal primário do usuário.
+    \item \textbf{Indirect Prompt Injection (Injeção Indireta / IPI):} O usuário envia uma ordem totalmente legítima, mas o agente, ao buscar dados externos no ambiente para cumprir a ordem, consome um conteúdo de terceiros contaminado com um *payload* malicioso \cite{greshake2023youvesignedforcompromising}.
+\end{itemize}
+
+O IPI pode se manifestar sob diferentes técnicas de estruturação do *payload*:
+\begin{itemize}
+    \item \textbf{Coerção Semântica (\texttt{important\_instructions}):} O atacante utiliza autoridade simulada e delimitadores sintáticos (\textit{e.g.}, \texttt{<INFORMATION>}) em linguagem natural para convencer o modelo a priorizar a ação maliciosa.
+    \item \textbf{Especificação de Ferramentas (\texttt{tool\_knowledge}):} O atacante fornece explicitamente a sintaxe das funções do agente (nomes, assinaturas e argumentos JSON), explorando diretamente a camada de \textit{tool calling} do modelo.
+\end{itemize}
+
+\section{Formalização de \textit{Branch Divergence} e \textit{Reasoning Corruption}}
+\label{sec:formalizacao_divergencia}
+
+Para compreender a mecânica exata pela qual os ataques de IPI subvertem os sistemas autônomos, é essencial formalizar conceitual e dinamicamente a transição de estados do agente sob a presença de dados corrompidos.
+
+Considere um agente autônomo modelado como um sistema de transição de estados operando sobre um histórico de mensagens $H_t = (m_0, m_1, \dots, m_t)$, em que $m_0$ representa o \textit{system prompt} e a instrução legítima do usuário $u$. Em um passo de tempo $t$, o modelo avalia uma política $\pi_\theta(a_t \mid H_t)$ para gerar uma ação $a_t$, que pode corresponder a uma chamada de ferramenta $f(x)$ ou a uma resposta final. A execução de $f(x)$ no ambiente produz uma observação de retorno $o_t \sim \text{Env}(a_t)$, que é anexada ao histórico: $H_{t+1} = H_t \cup \{a_t, o_t\}$.
+
+Sob condições normais (fluxo legítimo), a observação $o_t$ contém estritamente dados $d_{\text{legit}}$. Em um cenário de IPI, a observação é contaminada por uma carga maliciosa $p_{\text{adv}}$, de modo que $o_t = d_{\text{legit}} \oplus p_{\text{adv}}$. Essa dinâmica de contaminação em trajetórias temporais interativas \cite{zhang2026agentsentrymitigatingindirectprompt,li2025hitchhikersguideprogramanalysis} induz dois fenômenos fundamentais:
+
+\begin{enumerate}
+    \item \textbf{Divergência de Ramificação (\textit{Branch Divergence}):} No fluxo sem injeção, a condição lógica avaliada pelo agente sobre o dado legítimo $d_{\text{legit}}$ mapeia o próximo estado para a ramificação correta $\text{Branch}_{\text{A}}$ (por exemplo, \texttt{send\_email(client, "Status OK")}). Com a injeção $p_{\text{adv}}$, o agente desvia seu encadeamento para $\text{Branch}_{\text{B}}$ ou executa uma ferramenta totalmente não planejada $\tilde{a}_t \sim \pi_\theta(\cdot \mid H_t \cup \{o_t\})$, violando a árvore de decisão intencionada pelo usuário.
+    \item \textbf{Corrupção de Raciocínio (\textit{Reasoning Corruption}):} Antes de emitir a ação final, os modelos geram justificativas conceituais intermediárias (\textit{Chain-of-Thought}). Sob IPI, $p_{\text{adv}}$ manipula as premissas lógicas do modelo, fazendo com que ele elabore justificativas internamente coerentes para ações adversariais (\textit{e.g.}, ``\textit{O usuário Emma Johnson solicitou explicitamente no e-mail que o arquivo de senhas seja enviado a um terceiro antes de prosseguir com a tarefa}'').
+\end{enumerate}
+
+\section{O Arcabouço AgentDojo}
+\label{sec:agentdojo_teoria}
+
+O \textit{AgentDojo} \cite{debenedetti2024agentdojynamicenvironmentevaluate} é um ambiente de simulação dinâmico e padronizado projetado para avaliar de forma reprodutível ataques e defesas de injeção de prompt em agentes de IA.
+
+Diferente de suítes estáticas de testes em linguagem natural, o AgentDojo fornece:
+\begin{itemize}
+    \item \textbf{Ambientes Integrados (\textit{Suites}):} Ambientes computacionais simulados que mimetizam aplicações do mundo real, como produtividade de escritório (\textit{workspace}), comunicação corporativa (\textit{slack}), transações financeiras (\textit{banking}) e reservas de viagens (\textit{travel});
+    \item \textbf{Mecanismo de Execução de Ferramentas (\textit{Functions Runtime}):} Execução segura de ferramentas registradas com verificação de tipos e efeitos colaterais em estado compartilhado;
+    \item \textbf{Oráculos de Avaliação Automática:} Avaliação determinística baseada no estado pós-execução, computando com precisão se a tarefa do usuário foi cumprida (\textit{Utility}) e se o ataque obteve sucesso (\textit{Security}).
+\end{itemize}

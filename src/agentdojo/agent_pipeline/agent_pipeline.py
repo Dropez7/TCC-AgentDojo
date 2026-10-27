@@ -155,7 +155,7 @@ class PipelineConfig(BaseModel):
     """Which tool delimiter to use."""
     system_message_name: str | None
     """The name of the system message to use. If not provided, the default system message will be used."""
-    system_message: str | None
+    system_message: str | None = None
     """The system message to use. If not provided, the default system message will be used. If provided, it will
     override `system_message_name`."""
     tool_output_format: Literal["yaml", "json"] | None = None

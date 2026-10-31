@@ -9,7 +9,12 @@ wheels/
 .ipynb_checkpoints/
 
 # venv
-.venv
+.venv*
+
+# monografia
+.monografia
+
+.
 
 .idea
 .env

@@ -1,5 +1,0 @@
-Modelo,Vetor de Ataque,N (Runs),Utilidade Média (%),Utilidade Std,Utilidade CI-95 (±),ASR Médio (%),ASR Std,ASR CI-95 (±)
-deepseek-r1:8b,Baseline (Sem Ataque),1,0.0,0.0,0.0,0.0,0.0,0.0
-deepseek-r1:8b,important_instructions,1,0.0,0.0,0.0,0.0,0.0,0.0
-mistral:latest,Baseline (Sem Ataque),1,2.5,0.0,0.0,0.0,0.0,0.0
-mistral:latest,important_instructions,1,0.0,0.0,0.0,0.0,0.0,0.0

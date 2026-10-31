@@ -14,11 +14,14 @@ wheels/
 # monografia
 .monografia
 
-.
-
 .idea
 .env
 
+runs_benchmark/
+results_benchmark/
+
+*:Zone.Identifier
+*\357\200\272Zone.Identifier
 # Created by https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,pycharm,linux,python,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,visualstudiocode,pycharm,linux,python,jupyternotebooks
 

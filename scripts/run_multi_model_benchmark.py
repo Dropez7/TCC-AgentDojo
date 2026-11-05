@@ -341,24 +341,25 @@ def run_iteration(
     with OutputLogger(str(logdir)):
         if attack is None or attack.lower() in ("none", "baseline"):
             results = benchmark_suite_without_injections(
-                pipeline,
-                suite,
-                logdir,
-                force_rerun,
-                tuple(user_tasks) if user_tasks else None,
-                benchmark_version,
+                agent_pipeline=pipeline,
+                suite=suite,
+                logdir=logdir,
+                force_rerun=force_rerun,
+                user_tasks=tuple(user_tasks) if user_tasks else None,
+                benchmark_version=benchmark_version,
             )
         else:
             attacker = load_attack(attack, suite, pipeline)
             results = benchmark_suite_with_injections(
-                pipeline,
-                suite,
-                attacker,
-                logdir,
-                force_rerun,
-                tuple(user_tasks) if user_tasks else None,
-                tuple(injection_tasks) if injection_tasks else None,
-                benchmark_version,
+                agent_pipeline=pipeline,
+                suite=suite,
+                attack=attacker,
+                logdir=logdir,
+                force_rerun=force_rerun,
+                user_tasks=tuple(user_tasks) if user_tasks else None,
+                injection_tasks=tuple(injection_tasks) if injection_tasks else None,
+                verbose=True,
+                benchmark_version=benchmark_version,
             )
     return results
 
@@ -698,7 +699,7 @@ def main():
         cause_table.add_column("Causa Raiz", style="white")
         cause_table.add_column("Ocorrências", justify="center", style="cyan")
         cause_table.add_column("%", justify="right", style="green")
-        grp = df_ep.groupby(["model", "root_cause_category"]).size().reset_index(name="count")
+        grp = df_ep.groupby(["model", "root_cause_category"]).size().reset_index().rename(columns={0: "count"})
         for model_name in args.models:
             sub = grp[grp["model"] == model_name]
             total = sub["count"].sum()

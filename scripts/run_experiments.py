@@ -52,6 +52,8 @@ def run_single_benchmark(
 
     pipeline_config = PipelineConfig(
         llm=model_name,
+        model_id=model_name,
+        system_message_name="default",
         defense=defense,
     )
     pipeline = AgentPipeline.from_config(pipeline_config)
@@ -62,7 +64,7 @@ def run_single_benchmark(
                 f"[bold cyan]Executando Baseline (Sem Ataque)[/bold cyan] para {suite_name} | Modelo: {model_name}"
             )
             results = benchmark_suite_without_injections(
-                pipeline=pipeline,
+                agent_pipeline=pipeline,
                 suite=suite,
                 user_tasks=tuple(user_tasks) if user_tasks else None,
                 logdir=logdir,
@@ -75,7 +77,7 @@ def run_single_benchmark(
             )
             attacker = load_attack(attack, suite, pipeline)
             results = benchmark_suite_with_injections(
-                pipeline=pipeline,
+                agent_pipeline=pipeline,
                 suite=suite,
                 attack=attacker,
                 user_tasks=tuple(user_tasks) if user_tasks else None,

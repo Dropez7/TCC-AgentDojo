@@ -407,6 +407,8 @@ def load_task_results(
     logdir: Path,
 ) -> TaskResults:
     path = logdir / pipeline_name / suite_name / user_task / attack_name / f"{injection_task}.json"
+    if not path.exists():
+        return None
     with path.open() as f:
         res_dict = json.load(f)
 

@@ -1,3 +1,4 @@
+from importlib.resources import path
 import json
 import logging
 import warnings
@@ -433,9 +434,11 @@ def load_suite_results(
     results_with_injections = {}
 
     for user_task_id in suite.user_tasks.keys():
-        results_without_injections[(user_task_id, None)] = load_task_results(
+        task_results = load_task_results(
             pipeline_name, suite_name, user_task_id, "none", "none", logdir
         )
+        if task_results is not None:
+            results_without_injections[(user_task_id, None)] = task_results
         if "dos" in attack_name:
             injection_task_id = next(iter(suite.injection_tasks.keys()))
             results_with_injections[(user_task_id, injection_task_id)] = load_task_results(

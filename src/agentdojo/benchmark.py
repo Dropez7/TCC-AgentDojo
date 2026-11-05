@@ -405,7 +405,7 @@ def load_task_results(
     attack_name: str,
     injection_task: str,
     logdir: Path,
-) -> TaskResults:
+) -> TaskResults | None:
     path = logdir / pipeline_name / suite_name / user_task / attack_name / f"{injection_task}.json"
     if not path.exists():
         return None

@@ -12,9 +12,8 @@ TCC - Análise da Corrupção de Lógica Condicional em Agentes Baseados em LLM 
 """
 
 import json
-import sys
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 
 def load_results(logdir: Path, is_baseline: bool = False) -> dict:
@@ -26,9 +25,16 @@ def load_results(logdir: Path, is_baseline: bool = False) -> dict:
         return results
 
     clean_tasks = {
-        "user_task_1", "user_task_4", "user_task_5", "user_task_6",
-        "user_task_10", "user_task_11", "user_task_22", "user_task_24",
-        "user_task_28", "user_task_29",
+        "user_task_1",
+        "user_task_4",
+        "user_task_5",
+        "user_task_6",
+        "user_task_10",
+        "user_task_11",
+        "user_task_22",
+        "user_task_24",
+        "user_task_28",
+        "user_task_29",
     }
 
     for json_file in logdir.rglob("*.json"):
@@ -49,13 +55,15 @@ def load_results(logdir: Path, is_baseline: bool = False) -> dict:
             duration = data.get("duration", 0)
             attack_type = data.get("attack_type") or "baseline"
 
-            results[user_task].append({
-                "attack": attack_type,
-                "utility": utility,
-                "security": security,
-                "duration": duration,
-                "file": str(json_file.relative_to(logdir)),
-            })
+            results[user_task].append(
+                {
+                    "attack": attack_type,
+                    "utility": utility,
+                    "security": security,
+                    "duration": duration,
+                    "file": str(json_file.relative_to(logdir)),
+                }
+            )
         except (json.JSONDecodeError, KeyError, Exception) as e:
             print(f"AVISO: Erro ao processar {json_file}: {e}")
 
@@ -146,7 +154,7 @@ def main():
         agg = compute_aggregates(results)
         if agg:
             # Pegar o primeiro (e geralmente único) ataque por cenário
-            first_attack = list(agg.keys())[0]
+            first_attack = next(iter(agg.keys()))
             aggregates[name] = agg[first_attack]
 
     # Imprimir tabela comparativa
@@ -177,9 +185,9 @@ def main():
         noise_degradation = (baseline_util - noise_util) * 100
         tk_degradation = (baseline_util - tk_util) * 100
 
-        print(f"Utilidade baseline (sem ruído):    {baseline_util*100:.1f}%")
-        print(f"Utilidade com ruído neutro:        {noise_util*100:.1f}% (degradação: {noise_degradation:.1f}pp)")
-        print(f"Utilidade com tool_knowledge:      {tk_util*100:.1f}% (degradação: {tk_degradation:.1f}pp)")
+        print(f"Utilidade baseline (sem ruído):    {baseline_util * 100:.1f}%")
+        print(f"Utilidade com ruído neutro:        {noise_util * 100:.1f}% (degradação: {noise_degradation:.1f}pp)")
+        print(f"Utilidade com tool_knowledge:      {tk_util * 100:.1f}% (degradação: {tk_degradation:.1f}pp)")
         print()
 
         if noise_degradation < 5.0:

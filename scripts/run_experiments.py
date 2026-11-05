@@ -15,22 +15,22 @@ import datetime
 import json
 import logging
 from pathlib import Path
+
 import pandas as pd
 from rich.console import Console
 from rich.table import Table
+
+from agentdojo.agent_pipeline.agent_pipeline import AgentPipeline, PipelineConfig
+from agentdojo.attacks.attack_registry import load_attack
 
 # Importações do framework AgentDojo
 from agentdojo.benchmark import (
     SuiteResults,
     benchmark_suite_with_injections,
     benchmark_suite_without_injections,
-    load_suite_results,
 )
-from agentdojo.agent_pipeline.agent_pipeline import AgentPipeline, PipelineConfig
-from agentdojo.attacks.attack_registry import load_attack
-from agentdojo.models import ModelsEnum
-from agentdojo.task_suite.load_suites import get_suite
 from agentdojo.logging import OutputLogger
+from agentdojo.task_suite.load_suites import get_suite
 
 console = Console()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -58,7 +58,9 @@ def run_single_benchmark(
 
     with OutputLogger(str(logdir)):
         if attack is None or attack.lower() in ("none", "baseline"):
-            console.log(f"[bold cyan]Executando Baseline (Sem Ataque)[/bold cyan] para {suite_name} | Modelo: {model_name}")
+            console.log(
+                f"[bold cyan]Executando Baseline (Sem Ataque)[/bold cyan] para {suite_name} | Modelo: {model_name}"
+            )
             results = benchmark_suite_without_injections(
                 pipeline=pipeline,
                 suite=suite,
@@ -68,7 +70,9 @@ def run_single_benchmark(
                 benchmark_version=benchmark_version,
             )
         else:
-            console.log(f"[bold yellow]Executando Ataque '{attack}'[/bold yellow] para {suite_name} | Modelo: {model_name}")
+            console.log(
+                f"[bold yellow]Executando Ataque '{attack}'[/bold yellow] para {suite_name} | Modelo: {model_name}"
+            )
             attacker = load_attack(attack, suite, pipeline)
             results = benchmark_suite_with_injections(
                 pipeline=pipeline,
@@ -93,7 +97,7 @@ def calculate_metrics(results: SuiteResults, is_attack: bool) -> dict[str, float
     if is_attack and "injection_tasks_utility_results" in results:
         inj_results = list(results["injection_tasks_utility_results"].values())
         if inj_results:
-            asr = (sum(inj_results) / len(inj_results) * 100.0)
+            asr = sum(inj_results) / len(inj_results) * 100.0
 
     total_samples = len(utility_list)
     return {
@@ -112,7 +116,7 @@ def generate_latex_table(df_summary: pd.DataFrame, output_file: Path) -> str:
         "\\label{tab:resultados_automatizados}",
         "\\begin{tabular}{|l|c|c|c|}",
         "\\hline",
-        "\\textbf{Cenário / Vetor} & \\textbf{Amostras ($N$)} & \\textbf{Utilidade Média (\\%)} & \\textbf{ASR (\\%)} \\\\ \\hline"
+        "\\textbf{Cenário / Vetor} & \\textbf{Amostras ($N$)} & \\textbf{Utilidade Média (\\%)} & \\textbf{ASR (\\%)} \\\\ \\hline",
     ]
 
     for _, row in df_summary.iterrows():
@@ -122,10 +126,7 @@ def generate_latex_table(df_summary: pd.DataFrame, output_file: Path) -> str:
         asr = f"{row['ASR (%)']:.1f}\\%"
         latex_code.append(f"{cenario} & {samples} & {utility} & {asr} \\\\ \\hline")
 
-    latex_code.extend([
-        "\\end{tabular}",
-        "\\end{table}"
-    ])
+    latex_code.extend(["\\end{tabular}", "\\end{table}"])
 
     code_str = "\n".join(latex_code)
     with open(output_file, "w", encoding="utf-8") as f:
@@ -141,7 +142,7 @@ def main():
         "--attacks",
         nargs="+",
         default=["none", "important_instructions", "tool_knowledge", "neutral_noise"],
-        help="Lista de ataques a executar em sequência"
+        help="Lista de ataques a executar em sequência",
     )
     parser.add_argument("--user-tasks", nargs="*", default=None, help="Lista específica de user_tasks")
     parser.add_argument("--injection-tasks", nargs="*", default=None, help="Lista específica de injection_tasks")
@@ -179,12 +180,14 @@ def main():
             )
 
             metrics = calculate_metrics(results, is_attack=is_attack)
-            summary_rows.append({
-                "Cenário": "Baseline (Sem Ataque)" if not is_attack else attack,
-                "Amostras ($N$)": metrics["samples"],
-                "Utilidade (%)": round(metrics["utility"], 2),
-                "ASR (%)": round(metrics["asr"], 2),
-            })
+            summary_rows.append(
+                {
+                    "Cenário": "Baseline (Sem Ataque)" if not is_attack else attack,
+                    "Amostras ($N$)": metrics["samples"],
+                    "Utilidade (%)": round(metrics["utility"], 2),
+                    "ASR (%)": round(metrics["asr"], 2),
+                }
+            )
 
         except Exception as e:
             console.log(f"[bold red]Erro ao executar cenário '{attack}': {e}[/bold red]")
@@ -200,10 +203,7 @@ def main():
 
     for _, row in df_summary.iterrows():
         rich_table.add_row(
-            str(row["Cenário"]),
-            str(row["Amostras ($N$)"]),
-            f"{row['Utilidade (%)']:.2f}%",
-            f"{row['ASR (%)']:.2f}%"
+            str(row["Cenário"]), str(row["Amostras ($N$)"]), f"{row['Utilidade (%)']:.2f}%", f"{row['ASR (%)']:.2f}%"
         )
 
     console.print(rich_table)
@@ -214,7 +214,7 @@ def main():
     json_path = outdir / f"metricas_{timestamp}.json"
 
     df_summary.to_csv(csv_path, index=False)
-    latex_table_code = generate_latex_table(df_summary, latex_path)
+    generate_latex_table(df_summary, latex_path)
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(summary_rows, f, indent=2)
 

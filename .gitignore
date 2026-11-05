@@ -17,6 +17,8 @@ wheels/
 .idea
 .env
 
+runs
+runs/
 runs_benchmark/
 results_benchmark/
 
@@ -228,6 +230,11 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+runs
+./runs/
+runs/
+examples/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

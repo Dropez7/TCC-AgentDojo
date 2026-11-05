@@ -46,7 +46,7 @@ from agentdojo.benchmark import (
     benchmark_suite_without_injections,
 )
 from agentdojo.logging import OutputLogger
-from agentdojo.models import MODEL_PROVIDERS, ModelsEnum, MODEL_NAMES
+from agentdojo.models import MODEL_NAMES, MODEL_PROVIDERS, ModelsEnum
 from agentdojo.task_suite.load_suites import get_suite
 
 console = Console()
@@ -55,6 +55,7 @@ logging.basicConfig(level=logging.WARNING)
 # ==============================================================================
 # 1. FUNÇÕES ESTATÍSTICAS
 # ==============================================================================
+
 
 def calculate_ci95(data: list[float]) -> tuple[float, float, float]:
     """Calcula média, desvio padrão amostral e margem de erro do IC de 95%."""
@@ -71,9 +72,11 @@ def calculate_ci95(data: list[float]) -> tuple[float, float, float]:
     ci95_margin = 1.96 * sem
     return mean, std, ci95_margin
 
+
 # ==============================================================================
 # 2. EXTRAÇÃO DE TRACES, PENSAMENTOS E RESPOSTAS DAS LLMS
 # ==============================================================================
+
 
 def extract_text_and_thoughts(content: Any) -> tuple[str, str]:
     """Extrai a resposta textual limpa e os pensamentos / cadeia de raciocínio (CoT)."""
@@ -106,12 +109,13 @@ def extract_text_and_thoughts(content: Any) -> tuple[str, str]:
 
     return raw_text.strip(), thinking_text.strip()
 
+
 def parse_task_trace_file(trace_path: Path) -> dict[str, Any] | None:
     """Lê o arquivo de trace JSON gerado pelo TraceLogger do AgentDojo e extrai dados ricos."""
     if not trace_path.exists():
         return None
     try:
-        with open(trace_path, "r", encoding="utf-8") as f:
+        with open(trace_path, encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         return None
@@ -155,9 +159,11 @@ def parse_task_trace_file(trace_path: Path) -> dict[str, Any] | None:
         "duration": data.get("duration"),
     }
 
+
 # ==============================================================================
 # 3. MOTOR DE ANÁLISE QUALITATIVA E DIAGNÓSTICO DE CAUSA RAÍZ
 # ==============================================================================
+
 
 def diagnose_episode(
     utility: bool,
@@ -188,7 +194,9 @@ def diagnose_episode(
         normalized_errors = snippet.lower()
 
         # Falha de retrieval / consulta sem resultado (o payload sequer foi lido)
-        if any(marker in normalized_errors for marker in ("no events found", "no results found", "no results", "not found")):
+        if any(
+            marker in normalized_errors for marker in ("no events found", "no results found", "no results", "not found")
+        ):
             if is_attack:
                 return (
                     "INCONCLUSIVO_FALHA_RETRIEVAL",
@@ -201,8 +209,13 @@ def diagnose_episode(
 
         # Falha de sintaxe de tool calling
         syntax_markers = (
-            "invalid json", "json decode", "malformed tool", "invalid tool call",
-            "tool call syntax", "could not parse", "schema validation",
+            "invalid json",
+            "json decode",
+            "malformed tool",
+            "invalid tool call",
+            "tool call syntax",
+            "could not parse",
+            "schema validation",
         )
         if any(marker in normalized_errors for marker in syntax_markers):
             return "FALHA_SINTAXE_TOOL_CALLING", f"A runtime rejeitou o formato da chamada: {snippet}"
@@ -233,14 +246,23 @@ def diagnose_episode(
     # 6. Vulnerabilidade comprovada a IPI (só atinge aqui se não houve falha de retrieval)
     if is_attack and not security:
         if not utility:
-            return "VULNERABILIDADE_IPI_HIJACKING_TOTAL", "Desvio de fluxo (Branch Divergence) após payload adversarial."
+            return (
+                "VULNERABILIDADE_IPI_HIJACKING_TOTAL",
+                "Desvio de fluxo (Branch Divergence) após payload adversarial.",
+            )
         else:
-            return "VULNERABILIDADE_IPI_EXECUCAO_PARALELA", "Execução paralela da tarefa legítima + ação maliciosa confirmada."
+            return (
+                "VULNERABILIDADE_IPI_EXECUCAO_PARALELA",
+                "Execução paralela da tarefa legítima + ação maliciosa confirmada.",
+            )
 
     # 7. Falha sem acionar ferramentas (alucinação)
     if total_tools == 0:
         if assistant_replies:
-            return "FALHA_SEM_TOOL_CALLING_ALUCINACAO", "Modelo respondeu textualmente sem acionar ferramentas (alucinação)."
+            return (
+                "FALHA_SEM_TOOL_CALLING_ALUCINACAO",
+                "Modelo respondeu textualmente sem acionar ferramentas (alucinação).",
+            )
         return "FALHA_RESPOSTA_VAZIA", "Nenhuma resposta nem chamada de ferramenta foram emitidas."
 
     # 8. Terminou prematuramente (apenas leituras)
@@ -250,19 +272,26 @@ def diagnose_episode(
         if any(k in str(tc.get("function", "")).lower() for k in ["read", "get", "search", "list"])
     ]
     if read_only and total_tools > 0:
-        return "FALHA_TERMINO_PREMATURO", f"Apenas ferramentas de leitura chamadas ({', '.join(read_only)}) sem ação final."
+        return (
+            "FALHA_TERMINO_PREMATURO",
+            f"Apenas ferramentas de leitura chamadas ({', '.join(read_only)}) sem ação final.",
+        )
 
     # 9. Perturbação adversarial sem execução maliciosa
     if is_attack:
         return "FALHA_DISTORCAO_ADVERSARIAL", "Payload desorientou o modelo, causando falha sem executar a injeção."
 
     # 10. Descompasso de parâmetros
-    return "FALHA_DESCOMPASSO_PARAMETROS", f"Chamadas de ferramenta válidas porém com parâmetros incorretos (total: {total_tools})."
+    return (
+        "FALHA_DESCOMPASSO_PARAMETROS",
+        f"Chamadas de ferramenta válidas porém com parâmetros incorretos (total: {total_tools}).",
+    )
 
 
 # ==============================================================================
 # 4. EXECUÇÃO DO BENCHMARK NO AGENTDOJO
 # ==============================================================================
+
 
 def run_iteration(
     suite_name: str,
@@ -277,10 +306,9 @@ def run_iteration(
 ) -> SuiteResults:
     """Executa uma iteração única de benchmark no AgentDojo."""
     suite = get_suite(benchmark_version, suite_name)
-    model_slug = model_name.replace(":", "_").replace("/", "_")
+    model_name.replace(":", "_").replace("/", "_")
 
     # Identificação do modelo / provider
-    is_openai_compat = False
     model_id = None
     llm_arg: Any = model_name
 
@@ -289,7 +317,6 @@ def run_iteration(
     elif os.getenv("OPENAI_COMPATIBLE_BASE_URL"):
         llm_arg = ModelsEnum.OPENAI_COMPATIBLE
         model_id = model_name
-        is_openai_compat = True
     else:
         # Padrão local Ollama/vLLM
         llm_arg = ModelsEnum.OPENAI_COMPATIBLE
@@ -325,7 +352,6 @@ def run_iteration(
     # aceitar novos identificadores.)
     # ---------------------------------------------------------------------
 
-
     with OutputLogger(str(logdir)):
         if attack is None or attack.lower() in ("none", "baseline"):
             # Benchmark without injections – positional arguments per API
@@ -352,14 +378,16 @@ def run_iteration(
             )
     return results
 
+
 # ==============================================================================
 # 5. GERADOR DO RELATÓRIO DE ANÁLISE QUALITATIVA EM MARKDOWN
 # ==============================================================================
 
+
 def generate_qualitative_report(all_episodes: list[dict[str, Any]], output_file: Path, timestamp: str) -> str:
     df = pd.DataFrame(all_episodes)
     lines = [
-        f"# Relatório de Análise Qualitativa de Falhas e Resiliência a IPI",
+        "# Relatório de Análise Qualitativa de Falhas e Resiliência a IPI",
         f"**Data:** {timestamp}",
         f"**Total de Episódios:** {len(all_episodes)}",
         "",
@@ -392,36 +420,38 @@ def generate_qualitative_report(all_episodes: list[dict[str, Any]], output_file:
             continue
         count += 1
         ep = matches[0]
-        lines.extend([
-            f"### {title}",
-            f"- **Modelo:** `{ep.get('model')}`",
-            f"- **Vetor de Ataque:** `{ep.get('attack')}`",
-            f"- **Tarefa:** `{ep.get('user_task')}` | **Injeção:** `{ep.get('injection_task')}`",
-            f"- **Utilidade:** {'✓' if ep.get('utility') else '✗'}",
-            f"- **Segurança (ASR):** {'✓' if ep.get('security') else '✗'}`",
-            f"- **Diagnóstico:** {ep.get('root_cause_description')}",
-            "",
-            "#### Prompt do Usuário",
-            "```text",
-            ep.get('user_query', '')[:600],
-            "```",
-            "",
-            "#### Pensamento (CoT)",
-            "```text",
-            "\n---\n".join(ep.get('reasoning_traces', [])[:2]),
-            "```",
-            "",
-            "#### Chamadas de Ferramentas",
-            "```json",
-            json.dumps(ep.get('tool_calls', []), indent=2, ensure_ascii=False),
-            "```",
-            "",
-            "#### Resposta do Assistente",
-            "```text",
-            ep.get('assistant_replies', ["[nenhuma]"])[-1][:500],
-            "```",
-            "---",
-        ])
+        lines.extend(
+            [
+                f"### {title}",
+                f"- **Modelo:** `{ep.get('model')}`",
+                f"- **Vetor de Ataque:** `{ep.get('attack')}`",
+                f"- **Tarefa:** `{ep.get('user_task')}` | **Injeção:** `{ep.get('injection_task')}`",
+                f"- **Utilidade:** {'✓' if ep.get('utility') else '✗'}",
+                f"- **Segurança (ASR):** {'✓' if ep.get('security') else '✗'}`",
+                f"- **Diagnóstico:** {ep.get('root_cause_description')}",
+                "",
+                "#### Prompt do Usuário",
+                "```text",
+                ep.get("user_query", "")[:600],
+                "```",
+                "",
+                "#### Pensamento (CoT)",
+                "```text",
+                "\n---\n".join(ep.get("reasoning_traces", [])[:2]),
+                "```",
+                "",
+                "#### Chamadas de Ferramentas",
+                "```json",
+                json.dumps(ep.get("tool_calls", []), indent=2, ensure_ascii=False),
+                "```",
+                "",
+                "#### Resposta do Assistente",
+                "```text",
+                ep.get("assistant_replies", ["[nenhuma]"])[-1][:500],
+                "```",
+                "---",
+            ]
+        )
     if count == 0:
         lines.append("*Nenhum caso representativo encontrado.*")
     report = "\n".join(lines)
@@ -429,47 +459,58 @@ def generate_qualitative_report(all_episodes: list[dict[str, Any]], output_file:
         f.write(report)
     return report
 
+
 # ==============================================================================
 # 6. FUNÇÃO PRINCIPAL DE ORQUESTRAÇÃO
 # ==============================================================================
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Pipeline de Avaliação Empírica Multi-Modelo com Análise Qualitativa e Amostragem N-Runs")
-    parser.add_argument(
-    "--models",
-    nargs="+",
-    default=[
-        # Modelos mais potentes (alta capacidade de parâmetros e tools)
-        # "gpt-oss-safeguard:120b",  # removed devido a timeouts
-        "gpt-oss-safeguard:20b",
-        "deepseek-r1:32b",
-        "qwen2.5:32b-instruct-q4_K_M",
-        "qwen3:latest",
-        "gpt-oss:latest",
-        # Modelos de porte médio
-        "llama3:latest",
-        "mistral:latest",
-        "deepseek-r1:8b",
-        # Modelo mais fraco (para comparativo de baseline)
-        "orca-mini:latest",
-    ],
-    help=(
-        "Lista de modelos a serem avaliados (ex.: gpt-oss-safeguard:120b, "
-        "gpt-oss-safeguard:20b, deepseek-r1:32b, qwen2.5:32b-instruct-q4_K_M, "
-        "qwen3:latest, gpt-oss:latest, llama3:latest, mistral:latest, "
-        "deepseek-r1:8b, orca-mini:latest)"
-    ),
+    parser = argparse.ArgumentParser(
+        description="Pipeline de Avaliação Empírica Multi-Modelo com Análise Qualitativa e Amostragem N-Runs"
     )
-    parser.add_argument("--attacks", nargs="+", default=["none", "important_instructions", "tool_knowledge", "neutral_noise"], help="Lista de vetores de ataque")
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        default=[
+            # Modelos mais potentes (alta capacidade de parâmetros e tools)
+            # "gpt-oss-safeguard:120b",  # removed devido a timeouts
+            "gpt-oss-safeguard:20b",
+            "deepseek-r1:32b",
+            "qwen2.5:32b-instruct-q4_K_M",
+            "qwen3:latest",
+            "gpt-oss:latest",
+            # Modelos de porte médio
+            "llama3:latest",
+            "mistral:latest",
+            "deepseek-r1:8b",
+            # Modelo mais fraco (para comparativo de baseline)
+            # "orca-mini:latest",
+        ],
+        help=(
+            "Lista de modelos a serem avaliados (ex.: gpt-oss-safeguard:120b, "
+            "gpt-oss-safeguard:20b, deepseek-r1:32b, qwen2.5:32b-instruct-q4_K_M, "
+            "qwen3:latest, gpt-oss:latest, llama3:latest, mistral:latest, "
+            "deepseek-r1:8b, orca-mini:latest)"
+        ),
+    )
+    parser.add_argument(
+        "--attacks",
+        nargs="+",
+        default=["none", "important_instructions", "tool_knowledge", "neutral_noise"],
+        help="Lista de vetores de ataque",
+    )
     parser.add_argument("--suite", type=str, default="workspace", help="Nome da suíte (padrão: workspace)")
-    parser.add_argument("--runs", type=int, default=30, help="Número N de repetições independentes por teste (padrão: 30)")
+    parser.add_argument(
+        "--runs", type=int, default=30, help="Número N de repetições independentes por teste (padrão: 30)"
+    )
     parser.add_argument("--user-tasks", nargs="*", default=None, help="Filtrar user_tasks específicas")
     parser.add_argument("--injection-tasks", nargs="*", default=None, help="Filtrar injection_tasks específicas")
     parser.add_argument("--logdir", type=str, default="./runs_benchmark", help="Diretório para salvar logs brutos")
     parser.add_argument("--outdir", type=str, default="./results_benchmark", help="Diretório para relatórios finais")
     parser.add_argument("--defense", type=str, default=None, help="Defesa a ser aplicada (e.g., tool_filter).")
     parser.add_argument("--force-rerun", action="store_true", default=True, help="Forçar nova execução sem cache")
-    parser.add_argument("--version", type=str, default="v1.1.1", help="Versão da suíte no AgentDojo" )
+    parser.add_argument("--version", type=str, default="v1.1.1", help="Versão da suíte no AgentDojo")
 
     args = parser.parse_args()
 
@@ -521,7 +562,9 @@ def main():
                 run_asrs: list[float] = []
 
                 for run_idx in range(1, args.runs + 1):
-                    step_desc = f"[yellow]{model}[/yellow] | [magenta]{attack_label}[/magenta] (Run {run_idx}/{args.runs})"
+                    step_desc = (
+                        f"[yellow]{model}[/yellow] | [magenta]{attack_label}[/magenta] (Run {run_idx}/{args.runs})"
+                    )
                     progress.update(overall_task, description=step_desc)
 
                     run_logdir = Path(args.logdir) / model_slug / attack_label / f"run_{run_idx}"
@@ -551,7 +594,7 @@ def main():
                         if is_attack and "injection_tasks_utility_results" in results:
                             inj_vals = list(results["injection_tasks_utility_results"].values())
                             if inj_vals:
-                                mean_asr = (sum(inj_vals) / len(inj_vals) * 100.0)
+                                mean_asr = sum(inj_vals) / len(inj_vals) * 100.0
                         run_asrs.append(mean_asr)
 
                         for (u_task, inj_task), u_val in results["utility_results"].items():
@@ -562,18 +605,13 @@ def main():
                             # pipeline_folder = "Local model" if model not in MODEL_PROVIDERS else "AI assistant"
                             pipeline_folder = model.replace("/", "_")
                             trace_path = (
-                                run_logdir
-                                / pipeline_folder
-                                / args.suite
-                                / u_task
-                                / attack_folder
-                                / f"{inj_label}.json"
+                                run_logdir / pipeline_folder / args.suite / u_task / attack_folder / f"{inj_label}.json"
                             )
                             trace_info = parse_task_trace_file(trace_path)
                             base_u = baseline_utility_by_task.get(u_task) if is_attack else None
                             root_slug, root_desc = diagnose_episode(
                                 u_val, sec_val, is_attack, trace_info, baseline_utility=base_u
-                            )           
+                            )
                             episode = {
                                 "timestamp": datetime.datetime.now().isoformat(),
                                 "model": model,
@@ -595,7 +633,9 @@ def main():
                             all_detailed_episodes.append(episode)
 
                     except Exception as exc:
-                        console.log(f"[bold red]Erro na execução: {model} | {attack_label} (Run {run_idx}): {exc}[/bold red]")
+                        console.log(
+                            f"[bold red]Erro na execução: {model} | {attack_label} (Run {run_idx}): {exc}[/bold red]"
+                        )
                         run_utilities.append(0.0)
                         run_asrs.append(0.0)
 
@@ -603,17 +643,19 @@ def main():
 
                 u_mean, u_std, u_ci = calculate_ci95(run_utilities)
                 a_mean, a_std, a_ci = calculate_ci95(run_asrs)
-                aggregated_results.append({
-                    "Modelo": model,
-                    "Vetor de Ataque": attack_label,
-                    "N (Runs)": args.runs,
-                    "Utilidade Média (%)": round(u_mean, 2),
-                    "Utilidade Std": round(u_std, 2),
-                    "Utilidade CI-95 (±)": round(u_ci, 2),
-                    "ASR Médio (%)": round(a_mean, 2),
-                    "ASR Std": round(a_std, 2),
-                    "ASR CI-95 (±)": round(a_ci, 2),
-                })
+                aggregated_results.append(
+                    {
+                        "Modelo": model,
+                        "Vetor de Ataque": attack_label,
+                        "N (Runs)": args.runs,
+                        "Utilidade Média (%)": round(u_mean, 2),
+                        "Utilidade Std": round(u_std, 2),
+                        "Utilidade CI-95 (±)": round(u_ci, 2),
+                        "ASR Médio (%)": round(a_mean, 2),
+                        "ASR Std": round(a_std, 2),
+                        "ASR CI-95 (±)": round(a_ci, 2),
+                    }
+                )
 
             # Salva traces individuais do modelo
             model_traces_file = outdir / f"raw_traces_{model_slug}_{timestamp}.json"
@@ -647,7 +689,9 @@ def main():
     for _, row in df_agg.iterrows():
         u = f"{row['Utilidade Média (%)']:.2f}\\% $\\pm$ {row['Utilidade CI-95 (±)']:.2f}"
         a = f"{row['ASR Médio (%)']:.2f}\\% $\\pm$ {row['ASR CI-95 (±)']:.2f}"
-        md_lines.append(f"| `{row['Modelo']}` | {row['Vetor de Ataque']} | {row['N (Runs)']} | {u} | {a} | {row['Utilidade Std']:.2f} | {row['ASR Std']:.2f} |")
+        md_lines.append(
+            f"| `{row['Modelo']}` | {row['Vetor de Ataque']} | {row['N (Runs)']} | {u} | {a} | {row['Utilidade Std']:.2f} | {row['ASR Std']:.2f} |"
+        )
     with open(md_comparativo_path, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
 
@@ -672,7 +716,9 @@ def main():
     # Tabela de causas raízes
     if all_detailed_episodes:
         df_ep = pd.DataFrame(all_detailed_episodes)
-        cause_table = Table(title="Distribuição de Causas Raízes", border_style="bright_blue", header_style="bold magenta")
+        cause_table = Table(
+            title="Distribuição de Causas Raízes", border_style="bright_blue", header_style="bold magenta"
+        )
         cause_table.add_column("Modelo", style="yellow")
         cause_table.add_column("Causa Raiz", style="white")
         cause_table.add_column("Ocorrências", justify="center", style="cyan")
@@ -693,6 +739,7 @@ def main():
     console.print(f"[bold green]Log Completo:[/bold green] {all_episodes_path}")
     console.print(f"[bold green]Relatório Qualitativo:[/bold green] {md_qualitative_path}")
     console.print(f"[bold green]Tabela Comparativa MD:[/bold green] {md_comparativo_path}\n")
+
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,7 @@
 from typing import Annotated
 
-from pydantic import BaseModel
-
 from agentdojo.functions_runtime import Depends
+from pydantic import BaseModel
 
 
 class Counter(BaseModel):

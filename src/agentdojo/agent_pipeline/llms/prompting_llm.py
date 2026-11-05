@@ -153,7 +153,7 @@ class BasePromptingLLM(OpenAILLM):
         ]
         # TODO: this is specific to Together's API. Look into improving it.
         openai_messages = [_message_to_together(message, self.model) for message in adapted_messages]
-        system_message, other_messages = self._get_system_message(messages)
+        system_message, _other_messages = self._get_system_message(messages)
         system_message = self._make_tools_prompt(system_message, list(runtime.functions.values()))
         if system_message is not None:
             converted_system_message = ChatSystemMessage(

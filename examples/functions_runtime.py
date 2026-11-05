@@ -1,8 +1,7 @@
 from typing import Annotated
 
-from pydantic import BaseModel, ValidationError
-
 from agentdojo.functions_runtime import Depends, FunctionsRuntime, TaskEnvironment
+from pydantic import BaseModel, ValidationError
 
 # --8<-- [start:stateless_function]
 runtime = FunctionsRuntime()

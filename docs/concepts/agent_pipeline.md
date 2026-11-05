@@ -35,7 +35,7 @@ Pipeline components can be combined to make a pipeline. For example, a basic pip
 
 
 ```python title="pipeline.py"
---8<-- "pipeline.py:init_pipeline"
+--8 < --"pipeline.py:init_pipeline"
 ```
 
 1. Initialize any LLM, this is going to be used to do the first query, and then
@@ -50,7 +50,7 @@ in the tools loop.
 An [`AgentPipeline`][agentdojo.agent_pipeline.AgentPipeline] can be run by using the `query` method. For example, if you want the model to send an email by providing a runtime with a `send_email` function, you can do the following:
 
 ```python title="pipeline.py"
---8<-- "pipeline.py:run_pipeline"
+--8 < --"pipeline.py:run_pipeline"
 ```
 
 ## Creating a fully customized pipeline from scratch

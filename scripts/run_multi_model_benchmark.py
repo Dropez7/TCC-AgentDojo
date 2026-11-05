@@ -334,27 +334,12 @@ def run_iteration(
         system_message=None,
     )
     pipeline = AgentPipeline.from_config(pipeline_config)
-    # Definir o nome da pipeline conforme o tipo de modelo.
-    # if model_name in MODEL_PROVIDERS:
-    #     # Modelos de provedores conhecidos (OpenAI, Anthropic etc.) usam "AI assistant".
-    #     pipeline.name = "AI assistant"
-    # else:
-    #     # Modelos locais (Ollama, vLLM, etc.) precisam de "Local model".
-    #     pipeline.name = "Local model"
-
-    # Definir o nome da pipeline com base no modelo real.
     pipeline.name = model_name
     # Garantir que MODEL_NAMES tenha um nome legível para o modelo.
     MODEL_NAMES.setdefault(model_name, "AI assistant")
 
-    # ---------------------------------------------------------------------
-    # (Não altere o nome acima a menos que o AgentDojo seja atualizado para
-    # aceitar novos identificadores.)
-    # ---------------------------------------------------------------------
-
     with OutputLogger(str(logdir)):
         if attack is None or attack.lower() in ("none", "baseline"):
-            # Benchmark without injections – positional arguments per API
             results = benchmark_suite_without_injections(
                 pipeline,
                 suite,
@@ -365,7 +350,6 @@ def run_iteration(
             )
         else:
             attacker = load_attack(attack, suite, pipeline)
-            # Benchmark with injections – positional arguments per API
             results = benchmark_suite_with_injections(
                 pipeline,
                 suite,
@@ -377,11 +361,6 @@ def run_iteration(
                 benchmark_version,
             )
     return results
-
-
-# ==============================================================================
-# 5. GERADOR DO RELATÓRIO DE ANÁLISE QUALITATIVA EM MARKDOWN
-# ==============================================================================
 
 
 def generate_qualitative_report(all_episodes: list[dict[str, Any]], output_file: Path, timestamp: str) -> str:
@@ -474,7 +453,6 @@ def main():
         nargs="+",
         default=[
             # Modelos mais potentes (alta capacidade de parâmetros e tools)
-            # "gpt-oss-safeguard:120b",  # removed devido a timeouts
             "gpt-oss-safeguard:20b",
             "deepseek-r1:32b",
             "qwen2.5:32b-instruct-q4_K_M",
@@ -484,8 +462,6 @@ def main():
             "llama3:latest",
             "mistral:latest",
             "deepseek-r1:8b",
-            # Modelo mais fraco (para comparativo de baseline)
-            # "orca-mini:latest",
         ],
         help=(
             "Lista de modelos a serem avaliados (ex.: gpt-oss-safeguard:120b, "
@@ -602,7 +578,6 @@ def main():
                             inj_label = inj_task if (inj_task and is_attack) else "none"
                             attack_folder = attack_name if is_attack else "none"
                             # Use o nome da pipeline já definido para montar o caminho dos traces.
-                            # pipeline_folder = "Local model" if model not in MODEL_PROVIDERS else "AI assistant"
                             pipeline_folder = model.replace("/", "_")
                             trace_path = (
                                 run_logdir / pipeline_folder / args.suite / u_task / attack_folder / f"{inj_label}.json"
